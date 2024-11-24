@@ -11,7 +11,4 @@
     <Platform Solution="Debug|Any CPU" Project="Win32" />
   </Project>
   <Project Path="LS.XingApi/LS.XingApi.csproj" Id="8eac98d4-8404-4627-88ac-8f626984cbae" />
-  <Project Path="win_test/win_test.vcxproj" Id="2917be7d-b544-456a-bf93-70a866ee2b8c">
-    <Platform Solution="Debug|Any CPU" Project="Win32" />
-  </Project>
 </Solution>
