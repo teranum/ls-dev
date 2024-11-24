@@ -1,5 +1,4 @@
 ﻿import os, asyncio, ctypes, win32gui, win32api
-from urllib import response
 from datetime import datetime
 from xingAsync.models import AccountInfo, ResponseData
 from xingAsync.native import XING_MSG, RECV_FLAG, MSG_PACKET, RECV_PACKET
