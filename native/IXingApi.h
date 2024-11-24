@@ -146,7 +146,7 @@ namespace xing
 
 
 	public:
-		BOOL IsInit() { return m_hModule != NULL; }
+		BOOL IsInit() const { return m_hModule != NULL; }
 		BOOL Init(LPCTSTR szPath)
 		{
 			if (IsInit()) return TRUE;
@@ -317,7 +317,7 @@ namespace xing
 		int					nIsSystemError;				// 0:일반메시지, 1:System Error 메시지
 		char				szMsgCode[5 + 1];			// 메시지 코드
 		int					nMsgLength;					// Message 길이
-		unsigned char* lpszMessageData;					// Message Data
+		char* lpszMessageData;					// Message Data
 	} MSG_PACKET, * LPMSG_PACKET;
 
 	// 실시간TR 수신 Packet

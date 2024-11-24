@@ -3,11 +3,71 @@
 
 #include <windows.h>
 #include <iostream>
-#include "../native/IXingApi.h"
+#include "../native/XingApi.h"
 #include "../app_key.h"
-using namespace xing;
 
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
+xing::XingApi api;
+
+void xingapi_test(HWND hWnd)
+{
+	std::cout << "Test start" << std::endl;
+
+	//////////////////////////////////////////////
+	// xingapi login, show accounts
+	//////////////////////////////////////////////
+
+    if (!api.Init("C:\\LS_SEC\\xingAPI\\xingAPI.dll"))
+    {
+        std::cerr << "Failed to load xingAPI.dll!" << std::endl;
+        return;
+    }
+
+    // login
+    auto ret = api.login(hWnd, user_id, user_pwd, crt_pwd, 0, false);
+    if (!ret) {
+        std::cerr << "Failed to login: " << api.last_message << std::endl;
+        return;
+    }
+    std::cout << "Login success: " << api.last_message << std::endl;
+
+	// show account list
+	auto accounts = api.get_account_list();
+	std::cout << "Account list: " << accounts.size() << std::endl;
+	for (auto& account : accounts)
+	{
+		std::cout << account.number << ", " << account.name << ", " << account.detail_name << ", " << account.nick_name << std::endl;
+	}
+
+    // 업종전체조회
+	std::cout << std::endl;
+	auto response = api.request("t8424", "0");
+	if (!response.success) {
+		std::cerr << "t8424: Failed to request: [" << response.rsp_cd << "] " << response.rsp_msg << std::endl;
+		return;
+	}
+	std::cout << "t8424: Request success: [" << response.rsp_cd << "] " << response.rsp_msg << std::endl;
+    for (auto& outdata : response.outdatas)
+    {
+		std::cout << outdata.name/* << ": " << outdata.data*/ << std::endl;
+    }
+
+	// 주식 현재가(시세) 조회
+	// 종목코드: 005930
+	std::cout << std::endl;
+    response = api.request("t1102", "005930");
+    if (!response.success) {
+        std::cerr << "t1102: Failed to request: [" << response.rsp_cd << "] " << response.rsp_msg << std::endl;
+        return;
+    }
+    std::cout << "t1102: Request success: [" << response.rsp_cd << "] " << response.rsp_msg << std::endl;
+    for (auto& outdata : response.outdatas)
+    {
+        std::cout << outdata.name/* << ": " << outdata.data*/ << std::endl;
+    }
+
+	std::cout << "Test end" << std::endl;
+}
 
 int main()
 {
@@ -30,34 +90,13 @@ int main()
 
     if (!hWnd) {
         std::cerr << "Failed to create window!" << std::endl;
-        return 1;
+        return -1;
     }
 
-	//////////////////////////////////////////////
-	// xingapi connect and login, check the result, message
-	//////////////////////////////////////////////
+	// call xingapi test
+    xingapi_test(hWnd);
 
-	IXingApi api;
-    if (!api.Init("C:\\LS_SEC\\xingAPI\\xingAPI.dll"))
-	{
-		std::cerr << "Failed to load xingAPI.dll!" << std::endl;
-		return 1;
-	}
-
-    // connect
-    auto ret = api.ETK_Connect(hWnd, real_domain, serveer_port, WM_USER, -1, -1);
-	if (!ret) {
-		std::cerr << "Failed to connect!" << std::endl;
-		return 1;
-	}
-
-    // login
-    ret = api.ETK_Login(hWnd, user_id, user_pwd, crt_pwd, 0 ,false);
-	if (!ret) {
-		std::cerr << "Failed to login!" << std::endl;
-		return 1;
-	}
-
+	// Message loop
     MSG msg = { 0 };
     while (GetMessage(&msg, NULL, 0, 0)) {
         TranslateMessage(&msg);
@@ -71,17 +110,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
     std::cout << "hWnd=" << hWnd << ", Message=" << message << ", wParam=" << wParam << ", lParam=" << lParam << std::endl;
 
 	auto xm = message - WM_USER;
-	if (xm > 0 && xm < XM::XM_LAST)
+	if (xm > 0 && xm < xing::XM::XM_LAST)
 	{
-		std::cout << "XM=" << xm  << ", wParam=" << wParam << ", lParam=" << lParam<< std::endl;
-        switch (xm) {
-		case XM::XM_LOGIN:
-			std::cout << "XM_LOGIN: " << "code=" << (LPCSTR)wParam << " msg=" << (LPCSTR)lParam << std::endl;
-			break;
-        default:
-            break;
-        }
-        return 0;
+		api.WndProc(hWnd, message, wParam, lParam);
     }
     switch (message) {
     case WM_CREATE:
@@ -95,14 +126,3 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
 
     return 0;
 }
-
-// Run program: Ctrl + F5 or Debug > Start Without Debugging menu
-// Debug program: F5 or Debug > Start Debugging menu
-
-// Tips for Getting Started: 
-//   1. Use the Solution Explorer window to add/manage files
-//   2. Use the Team Explorer window to connect to source control
-//   3. Use the Output window to see build output and other messages
-//   4. Use the Error List window to view errors
-//   5. Go to Project > Add New Item to create new code files, or Project > Add Existing Item to add existing code files to the project
-//   6. In the future, to open this project again, go to File > Open > Project and select the .sln file

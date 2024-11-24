@@ -5,7 +5,9 @@
     <Platform Name="x86" />
   </Configurations>
   <Folder Name="/native/" Id="02ea681e-c7d8-13c7-8484-4ac65e1b71e8">
+    <File Path="native/AsyncMsgManager.h" />
     <File Path="native/IXingApi.h" />
+    <File Path="native/XingApi.h" />
   </Folder>
   <Project Path="console_test/console_test.vcxproj" Id="21bf7995-c4f0-40c1-9ca2-1a9eb6b271aa">
     <Platform Solution="Debug|Any CPU" Project="Win32" />
