@@ -3,6 +3,9 @@
 
 #include <windows.h>
 #include <iostream>
+#include "../native/IXingApi.h"
+#include "../app_key.h"
+using namespace xing;
 
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
 
@@ -30,8 +33,30 @@ int main()
         return 1;
     }
 
-    ShowWindow(hWnd, SW_SHOW);
-    UpdateWindow(hWnd);
+	//////////////////////////////////////////////
+	// xingapi connect and login, check the result, message
+	//////////////////////////////////////////////
+
+	IXingApi api;
+    if (!api.Init("C:\\LS_SEC\\xingAPI\\xingAPI.dll"))
+	{
+		std::cerr << "Failed to load xingAPI.dll!" << std::endl;
+		return 1;
+	}
+
+    // connect
+    auto ret = api.ETK_Connect(hWnd, real_domain, serveer_port, WM_USER, -1, -1);
+	if (!ret) {
+		std::cerr << "Failed to connect!" << std::endl;
+		return 1;
+	}
+
+    // login
+    ret = api.ETK_Login(hWnd, user_id, user_pwd, crt_pwd, 0 ,false);
+	if (!ret) {
+		std::cerr << "Failed to login!" << std::endl;
+		return 1;
+	}
 
     MSG msg = { 0 };
     while (GetMessage(&msg, NULL, 0, 0)) {
@@ -45,9 +70,22 @@ int main()
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) {
     std::cout << "hWnd=" << hWnd << ", Message=" << message << ", wParam=" << wParam << ", lParam=" << lParam << std::endl;
 
+	auto xm = message - WM_USER;
+	if (xm > 0 && xm < XM::XM_LAST)
+	{
+		std::cout << "XM=" << xm << std::endl;
+        switch (xm)
+        {
+        case XM::XM_LOGIN:
+        case XM::XM_DISCONNECT:
+		case XM::XM_LOGOUT:
+			break;
+        }
+        return 0;
+    }
     switch (message) {
     case WM_CREATE:
-        return 0;
+        break;
     case WM_DESTROY:
         PostQuitMessage(0);
         break;
