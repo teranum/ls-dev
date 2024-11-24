@@ -1,4 +1,5 @@
-﻿
+﻿import ctypes
+
 class XING_MSG:
     """ 서버메시지 """
 
@@ -30,3 +31,54 @@ class XING_MSG:
     """ 종목검색 실시간 데이터를 받았을 때 """
 
     XM_LAST: int = 12
+
+class RECV_FLAG:
+    REQUEST_DATA: int = 1
+    MESSAGE_DATA: int = 2
+    SYSTEM_ERROR_DATA: int = 3
+    RELEASE_DATA: int = 4
+
+class RECV_PACKET(ctypes.Structure):
+    _pack_ = 1
+    _fields_ = [
+        ("nRqID", ctypes.c_int),
+        ("nDataLength", ctypes.c_int),
+        ("nTotalDataBufferSize", ctypes.c_int),
+        ("nElapsedTime", ctypes.c_int),
+        ("nDataMode", ctypes.c_int),
+        ("szTrCode", ctypes.c_char * 10),
+        ("_szTrCode", ctypes.c_char),
+        ("cCont", ctypes.c_char),
+        ("szContKey", ctypes.c_char * 18),
+        ("_szContKey", ctypes.c_char),
+        ("szUserData", ctypes.c_char * 30),
+        ("_szUserData", ctypes.c_char),
+        ("szBlockName", ctypes.c_char * 16),
+        ("_szBlockName", ctypes.c_char),
+        ("lpData", ctypes.c_voidp)
+    ]
+
+class MSG_PACKET(ctypes.Structure):
+    _pack_ = 1
+    _fields_ = [
+        ("nRqID", ctypes.c_int),
+        ("nIsSystemError", ctypes.c_int),
+        ("szMsgCode", ctypes.c_char * 5),
+        ("_szMsgCode", ctypes.c_char),
+        ("nMsgLength", ctypes.c_int),
+        ("szMessageData", ctypes.c_voidp)
+    ]
+
+class REAL_RECV_PACKET(ctypes.Structure):
+    _pack_ = 1
+    _fields_ = [
+        ("szTrCode", ctypes.c_char * 3),
+        ("_szTrCode", ctypes.c_char),
+        ("nKeyLength", ctypes.c_int),
+        ("szKeyData", ctypes.c_char * 32),
+        ("_szKeyData", ctypes.c_char),
+        ("szRegKey", ctypes.c_char * 32),
+        ("_szRegKey", ctypes.c_char),
+        ("nDataLength", ctypes.c_int),
+        ("pszData", ctypes.c_voidp)
+    ]

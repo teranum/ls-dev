@@ -4,7 +4,7 @@
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>2b61bde3-bd81-4a96-8c74-65c0c03d8427</ProjectGuid>
     <ProjectHome>.</ProjectHome>
-    <StartupFile>samples\01. 로그인.py</StartupFile>
+    <StartupFile>samples\03. 업종-기간별추이.py</StartupFile>
     <SearchPath>src</SearchPath>
     <WorkingDirectory>
     </WorkingDirectory>
@@ -29,6 +29,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="samples\01. 로그인.py" />
+    <Compile Include="samples\03. 업종-기간별추이.py" />
     <Compile Include="samples\common.py" />
     <Compile Include="src\xingAsync\async_api.py" />
     <Compile Include="src\xingAsync\models.py" />
@@ -51,6 +52,7 @@
     <Content Include="LICENSE" />
     <Content Include="pyproject.toml" />
     <Content Include="README.md" />
+    <Content Include="samples\02. 업종-전체조회.py" />
   </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\Python Tools\Microsoft.PythonTools.targets" />
   <!-- Uncomment the CoreCompile target to enable the Build command in
