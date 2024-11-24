@@ -11,7 +11,7 @@
         self.pass_number: str = ''
         ''' 비밀번호 (4자리 숫자: 주문시 필수 세팅)'''
     def __str__(self):
-        return f'{self.number} {self.name} {self.detail_name}'
+        return f'{self.number} {self.name} {self.nick_name} {self.detail_name}'
 
 class ResponseData:
     '''

@@ -9,19 +9,6 @@ class XingApi:
     XM_MSG_BASE: int = 1024
     enc = 'euc-kr'
 
-    class _xing_signal:
-        def __init__(self):
-            self.__slots = []
-        def connect(self, slot):
-            self.__slots.append(slot)
-        def disconnect(self, slot):
-            self.__slots.remove(slot)
-        def disconnect(self):
-            self.__slots.clear()
-        def _emit(self, *args):
-            for slot in self.__slots:
-                slot(*args)
-
     def __init__(self, xing_folder: str = "C:/LS_SEC/xingAPI"):
         self.xing_folder = xing_folder
         full_path = os.path.join(xing_folder, "xingAPI.dll")
@@ -268,6 +255,19 @@ class XingApi:
             return 0
 
         return win32gui.DefWindowProc(hwnd, wm_msg, wparam, lparam)
+
+    class _xing_signal:
+        def __init__(self):
+            self.__slots = []
+        def connect(self, slot):
+            self.__slots.append(slot)
+        def disconnect(self, slot):
+            self.__slots.remove(slot)
+        def disconnect(self):
+            self.__slots.clear()
+        def _emit(self, *args):
+            for slot in self.__slots:
+                slot(*args)
 
     class _asyncNode:
         def __init__(self, hashid, callback):
