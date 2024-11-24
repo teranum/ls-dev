@@ -73,13 +73,13 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
 	auto xm = message - WM_USER;
 	if (xm > 0 && xm < XM::XM_LAST)
 	{
-		std::cout << "XM=" << xm << std::endl;
-        switch (xm)
-        {
-        case XM::XM_LOGIN:
-        case XM::XM_DISCONNECT:
-		case XM::XM_LOGOUT:
+		std::cout << "XM=" << xm  << ", wParam=" << wParam << ", lParam=" << lParam<< std::endl;
+        switch (xm) {
+		case XM::XM_LOGIN:
+			std::cout << "XM_LOGIN: " << "code=" << (LPCSTR)wParam << " msg=" << (LPCSTR)lParam << std::endl;
 			break;
+        default:
+            break;
         }
         return 0;
     }

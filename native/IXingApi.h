@@ -6,57 +6,6 @@ namespace xing
 	LPCSTR simul_domain = "demo.ls-sec.co.kr";
 	const int serveer_port = 20001;
 
-	enum XM
-	{
-		/// <summary>
-		/// 서버와의 연결이 끊어졌을 경우 발생
-		/// </summary>
-		XM_DISCONNECT = 1,
-
-		/// <summary>
-		/// RequestData로 요청한 데이터가 서버로부터 받았을 때 발생
-		/// </summary>
-		XM_RECEIVE_DATA = 3,
-
-		/// <summary>
-		/// AdviseData로 요청한 데이터가 서버로부터 받았을 때 발생
-		/// </summary>
-		XM_RECEIVE_REAL_DATA = 4,
-
-		/// <summary>
-		/// 서버로부터 로그인 결과 받았을때 발생
-		/// </summary>
-		XM_LOGIN = 5,
-
-		/// <summary>
-		/// 서버로부터 로그아웃 결과 받았을때 발생
-		/// </summary>
-		XM_LOGOUT = 6,
-
-		/// <summary>
-		/// RequestData로 요청한 데이터가 Timeout 이 발생했을때
-		/// </summary>
-		XM_TIMEOUT_DATA = 7,
-
-		/// <summary>
-		/// HTS 에서 연동 데이터가 발생했을 때	: by zzin 2013.11.11
-		/// </summary>
-		XM_RECEIVE_LINK_DATA = 8,
-
-		/// <summary>
-		/// 실시간 자동 등록한 후 차트 조회 시, 지표실시간 데이터를 받았을 때  : by zzin 2013.08.14
-		/// </summary>
-		XM_RECEIVE_REAL_DATA_CHART = 10,
-
-		/// <summary>
-		/// 종목검색 실시간 데이터를 받았을 때 			: by 2017.11.24 LSW
-		/// </summary>
-		XM_RECEIVE_REAL_DATA_SEARCH = 11,
-
-
-		XM_LAST
-	};
-
 	class IXingApi
 	{
 	public:
@@ -276,4 +225,123 @@ namespace xing
 
 
 	};
+
+	// XING API Message
+	enum XM
+	{
+		/// <summary>
+		/// 서버와의 연결이 끊어졌을 경우 발생
+		/// </summary>
+		XM_DISCONNECT = 1,
+
+		/// <summary>
+		/// RequestData로 요청한 데이터가 서버로부터 받았을 때 발생
+		/// </summary>
+		XM_RECEIVE_DATA = 3,
+
+		/// <summary>
+		/// AdviseData로 요청한 데이터가 서버로부터 받았을 때 발생
+		/// </summary>
+		XM_RECEIVE_REAL_DATA = 4,
+
+		/// <summary>
+		/// 서버로부터 로그인 결과 받았을때 발생
+		/// </summary>
+		XM_LOGIN = 5,
+
+		/// <summary>
+		/// 서버로부터 로그아웃 결과 받았을때 발생
+		/// </summary>
+		XM_LOGOUT = 6,
+
+		/// <summary>
+		/// RequestData로 요청한 데이터가 Timeout 이 발생했을때
+		/// </summary>
+		XM_TIMEOUT_DATA = 7,
+
+		/// <summary>
+		/// HTS 에서 연동 데이터가 발생했을 때	: by zzin 2013.11.11
+		/// </summary>
+		XM_RECEIVE_LINK_DATA = 8,
+
+		/// <summary>
+		/// 실시간 자동 등록한 후 차트 조회 시, 지표실시간 데이터를 받았을 때  : by zzin 2013.08.14
+		/// </summary>
+		XM_RECEIVE_REAL_DATA_CHART = 10,
+
+		/// <summary>
+		/// 종목검색 실시간 데이터를 받았을 때 			: by 2017.11.24 LSW
+		/// </summary>
+		XM_RECEIVE_REAL_DATA_SEARCH = 11,
+
+
+		XM_LAST
+	};
+
+	// RECEIVE_DATA FLAG
+	enum RF
+	{
+		REQUEST_DATA = 1,
+		MESSAGE_DATA = 2,
+		SYSTEM_ERROR_DATA = 3,
+		RELEASE_DATA = 4,
+	};
+
+	// Structure 정의
+#pragma pack( push, 1 )
+
+	// 조회TR 수신 Packet
+	typedef struct _RECV_PACKET
+	{
+		_RECV_PACKET() { ZeroMemory(this, sizeof(_RECV_PACKET)); }
+
+		int					nRqID;						// Request ID
+		int					nDataLength;				// 받은 데이터 크기
+		int					nTotalDataBufferSize;		// lpData에 할당된 크기
+		int					nElapsedTime;				// 전송에서 수신까지 걸린시간(1/1000초)
+		int					nDataMode;					// 1:BLOCK MODE, 2:NON-BLOCK MODE
+		char				szTrCode[10 + 1];			// AP Code
+		char				cCont[1];					// '0' : 다음조회 없음, '1' : 다음조회 있음
+		char				szContKey[18 + 1];			// 연속키, Data Header가 B 인 경우에만 사용
+		char				szUserData[30 + 1];			// 사용자 데이터
+		char				szBlockName[17];			// Block 명, Block Mode 일때 사용
+		unsigned char* lpData;							// Data	
+	} RECV_PACKET, * LPRECV_PACKET;
+
+	// 메시지 수신 Packet
+	typedef struct _MSG_PACKET
+	{
+		_MSG_PACKET() { ZeroMemory(this, sizeof(_MSG_PACKET)); }
+
+		int					nRqID;						// Request ID
+		int					nIsSystemError;				// 0:일반메시지, 1:System Error 메시지
+		char				szMsgCode[5 + 1];			// 메시지 코드
+		int					nMsgLength;					// Message 길이
+		unsigned char* lpszMessageData;					// Message Data
+	} MSG_PACKET, * LPMSG_PACKET;
+
+	// 실시간TR 수신 Packet
+	typedef struct _REAL_RECV_PACKET
+	{
+		_REAL_RECV_PACKET() { ZeroMemory(this, sizeof(_REAL_RECV_PACKET)); }
+
+		char				szTrCode[3 + 1];			// TR Code
+		int					nKeyLength;					// Key 길이
+		char				szKeyData[32 + 1];			// Key Data
+		char				szRegKey[32 + 1];			// 등록 Key
+		int					nDataLength;
+		char* pszData;
+	} RECV_REAL_PACKET, * LPRECV_REAL_PACKET;
+
+	// HTS에서 API로 연동되어 수신되는 Packet
+	typedef struct _LINKDATA_RECV_MSG
+	{
+		_LINKDATA_RECV_MSG() { ZeroMemory(this, sizeof(_LINKDATA_RECV_MSG)); }
+
+		char				sLinkName[32];
+		char				sLinkData[32];
+		char				sFiller[64];
+	}LINKDATA_RECV_MSG, * LPLINKDATA_RECV_MSG;
+
+#pragma pack( pop )
 }
