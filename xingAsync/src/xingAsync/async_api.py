@@ -1,9 +1,7 @@
-﻿import os, asyncio, ctypes, win32gui, win32api
-import time
-from datetime import datetime
+﻿import os, asyncio, ctypes, time, win32gui, win32api
 from xingAsync.models import AccountInfo, ResponseData
 from xingAsync.native import XING_MSG, RECV_FLAG, MSG_PACKET, RECV_PACKET, REAL_RECV_PACKET
-from xingAsync.resource import FieldSpec, ResInfo, ResourceManager
+from xingAsync.resource import FieldSpec, ResourceManager
 
 class XingApi:
     real_domain = b"api.ls-sec.co.kr"
@@ -21,7 +19,7 @@ class XingApi:
             self._module = None
 
         # create window handle
-        class_name = 'XingApiClientClass-' + str(datetime.now())
+        class_name = 'XingApiClientClass-' + str(time.perf_counter_ns())
         wc = win32gui.WNDCLASS()
         wc.lpfnWndProc = self._window_proc
         wc.lpszClassName = class_name
@@ -108,7 +106,9 @@ class XingApi:
         return buffer.value.decode(self.enc)
 
     def get_requests_count(self, tr_cd: str):
-        """ TR의 초당 전송 가능 횟수, Base 시간(초단위), TR의 10분당 제한 건수, 10분내 요청한 해당 TR의 총 횟수를 반환합니다. """
+        """
+        TR의 초당 전송 가능 횟수, Base 시간(초단위), TR의 10분당 제한 건수, 10분내 요청한 해당 TR의 총 횟수를 반환합니다.
+        """
         tr_cd_b = tr_cd.encode(self.enc)
         per_sec:int = self._module.ETK_GetTRCountPerSec(tr_cd_b)
         base_sec:int = self._module.ETK_GetTRCountBaseSec(tr_cd_b)
@@ -118,6 +118,7 @@ class XingApi:
 
     async def login(self, user_id: str, user_pwd: str, cert_pwd: str = "") -> bool:
         """
+        login to server
         """
         if self.logined:
             self.last_message = "Already connected"
@@ -175,11 +176,10 @@ class XingApi:
         self.close()
         return False
 
-    async def request(self, tr_cd:str, in_datas:str, cont_yn:bool = False, cont_key:str = '') -> dict:
+    async def request(self, tr_cd:str, in_datas:str, cont_yn:bool = False, cont_key:str = ''):
         """
         request data to server
         """
-        # self._last_nRqID = -9999
         if not self.logined:
             self.last_message = "Not logined"
             return None
@@ -228,7 +228,6 @@ class XingApi:
                     return str_val.ljust(size), ''
                 if field.var_type == FieldSpec.VarType.INT:
                     if value is None:
-                        # 0으로 size만큼 채움
                         return '0'.rjust(size), ''
                     if isinstance(value, str):
                         str_val = str(value)
@@ -239,12 +238,10 @@ class XingApi:
                             return str(value), 'invalid int value'
                     if len(str_val) > size:
                         return str_val, 'overflow'
-                    # 문자열 앞에 0으로 채움
                     return str_val.rjust(size, '0'), ''
                 if field.var_type == FieldSpec.VarType.FLOAT:
                     flag_B = res_info.headtype == 'B'
                     if flag_B:
-                        # 실수: 소수점을 포함, 소수점 자리수는 dot_size
                         if value is None:
                             str_val = '0'
                         else:
@@ -254,24 +251,18 @@ class XingApi:
                                 return str(value), 'invalid float value'
                         if '.' not in str_val:
                             str_val += '.'
-                            # 소수점 자리수만큼 0으로 채움
                             str_val += '0' * field.dot_size
                         else:
-                            # 소수점 위치
                             dot_pos = str_val.index('.')
-                            # 소수점 이하 자리수
                             dot_len = len(str_val) - dot_pos - 1
                             if dot_len > field.dot_size:
-                                # 소수점 이하 자리수가 dot_size보다 크면 잘라냄
                                 str_val = str_val[:dot_pos + field.dot_size + 1]
                             else:
-                                # 소수점 이하 자리수가 dot_size보다 작으면 0으로 채움
                                 str_val += '0' * (field.dot_size - dot_len)
                         if len(str_val) > size:
                             return str_val, 'overflow'
                         return str_val.rjust(size, '0'), ''
                     else:
-                        # 실수: 소수점을 포함하지 않음, 소수점 자리수는 dot_size
                         if value is None:
                             str_val = '0'
                         else:
@@ -280,18 +271,13 @@ class XingApi:
                             except :
                                 return str(value), 'invalid float value'
                         if '.' not in str_val:
-                            # 소수점 자리수만큼 0으로 채움
                             str_val += '0' * field.dot_size
                         else:
-                            # 소수점 위치
                             dot_pos = str_val.index('.')
-                            # 소수점 이하 자리수
                             dot_len = len(str_val) - dot_pos - 1
                             if dot_len > field.dot_size:
-                                # 소수점 이하 자리수가 dot_size보다 크면 잘라냄
                                 str_val = str_val[:dot_pos + field.dot_size]
                             else:
-                                # 소수점 이하 자리수가 dot_size보다 작으면 0으로 채움
                                 str_val += '0' * (field.dot_size - dot_len)
                         if len(str_val) > size:
                             return str_val, 'overflow'
@@ -312,7 +298,6 @@ class XingApi:
                     aligned_in_block_datas[i] = str_val
                     correct_in_block_dict[field.name] = str_val.strip()
             elif isinstance(in_datas, list):
-                # list
                 indata_count = len(in_datas)
                 for i in range(in_block_field_count):
                     field = in_block.fields[i]
@@ -341,7 +326,6 @@ class XingApi:
                 if res_info.is_attr:
                     indata_line += b" "
         elif in_blocks_count == 2:
-            # 입력 블록이 2개 이상인 경우, 따로 처리
             if response.tr_cd == 'o3127': # 해외선물옵션관심종목조회(o3127)-API용
                 # 입력 포멧: "F선물코드1, F선물코드2, O옵션코드1, O옵션코드2..."
                 if isinstance(in_datas, list):
@@ -390,12 +374,9 @@ class XingApi:
         self.last_message = ""
         start_time = time.perf_counter_ns()
         if tr_cd in ["t1857", "ChartIndex", "ChartExcel"]:
-            # 서비스 요청
             nRqID = self._module.ETK_RequestService(self._hwnd, tr_cd.encode(self.enc), indata_line)
         else:
-            # TR 요청
             nRqID = self._module.ETK_Request(self._hwnd, tr_cd.encode(self.enc), indata_line, len(indata_line), cont_yn, cont_key.encode(self.enc), self._default_timeout)
-        # self._last_nRqID = nRqID
         response.id = nRqID
         response.ticks.append(time.perf_counter_ns() - start_time)
         if response.id < 0:
@@ -413,16 +394,12 @@ class XingApi:
                 except :
                     response.id = -1;
             elif wparam == RECV_FLAG.REQUEST_DATA:
-                # time_start = time.perf_counter_ns()
-                # response.ticks.append(time_start - start_time)
                 unpack_result = ctypes.cast(lparam, ctypes.POINTER(RECV_PACKET)).contents
                 response.cont_yn = unpack_result.cCont == b'1'
                 response.cont_key = unpack_result.szContKey.decode(self.enc)
                 nDataLength = unpack_result.nDataLength
                 lpData = unpack_result.lpData
-                # response.body[unpack_result.szBlockName.decode(self.enc).strip()] = ctypes.string_at(unpack_result.lpData, unpack_result.nDataLength).decode(self.enc, "ignore")
                 if res_info.headtype == "A":
-                    # 해당 OutBlock 데이터 수신된다.
                     out_block_name = unpack_result.szBlockName.decode(self.enc).strip()
                     out_block = next((x for x in out_blocks if x.name == out_block_name), None)
                     if out_block is not None:
@@ -469,7 +446,6 @@ class XingApi:
                             else:
                                 response.body[out_block.name] = datas[0]
                 else:
-                    # 한번에 모든 OutBlock 데이터 수신된다.
                     for out_block in out_blocks:
                         nFrameCount = 0
                         if out_block.is_occurs:
@@ -521,7 +497,6 @@ class XingApi:
                             response.body[out_block.name] = datas
                         else:
                             response.body[out_block.name] = datas[0]
-                # response.ticks.append(time.perf_counter_ns() - time_start)
 
         node = XingApi._asyncNode(response.id, callback)
         self._asyncNodes.append(node)
@@ -573,8 +548,6 @@ class XingApi:
                     enc_val = in_datas[i].encode(self.enc)
                     enc_val = enc_val.ljust(field_size, b' ')
                     indata_line += enc_val
-                    # if res_info.is_attr:
-                    #     indata_line += b" "
 
         if advise:
             ok = self._module.ETK_AdviseRealData(self._hwnd, tr_cd.encode(self.enc), indata_line, len(indata_line))
@@ -598,7 +571,7 @@ class XingApi:
     def _window_proc(self, hwnd, wm_msg, wparam, lparam):
         xM: int = wm_msg - self.XM_MSG_BASE;
         if xM > 0 and xM < XING_MSG.XM_LAST:
-            # print(f"XingApi._window_proc: {xM}")
+            # print(f"XingApi._window_proc: {xM}-{wparam}-{lparam}")
             match xM:
                 case XING_MSG.XM_LOGIN:
                     hash_id = 0
@@ -634,6 +607,10 @@ class XingApi:
 
                         case RECV_FLAG.RELEASE_DATA:
                             hash_id = int(lparam)
+                            node = next((node for node in self._asyncNodes if node.hash_id == hash_id), None)
+                            if node:
+                                node.async_evented = True
+                                node.set()
                             self._module.ETK_ReleaseRequestData(lparam)
 
                 case XING_MSG.XM_TIMEOUT_DATA:

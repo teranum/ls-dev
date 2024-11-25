@@ -4,8 +4,8 @@
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>2b61bde3-bd81-4a96-8c74-65c0c03d8427</ProjectGuid>
     <ProjectHome>.</ProjectHome>
-    <StartupFile>samples\34. 해외선물-실시간시세-요청-중지.py</StartupFile>
-    <SearchPath>src</SearchPath>
+    <StartupFile>samples\Qt-종합샘플.py</StartupFile>
+    <SearchPath>src;samples</SearchPath>
     <WorkingDirectory>
     </WorkingDirectory>
     <OutputPath>.</OutputPath>
@@ -60,6 +60,8 @@
     <Compile Include="samples\48. 해외주식-예수금조회.py" />
     <Compile Include="samples\49. 해외주식-잔고-미체결-주문.py" />
     <Compile Include="samples\common.py" />
+    <Compile Include="samples\Qt-로그인.py" />
+    <Compile Include="samples\Qt-종합샘플.py" />
     <Compile Include="src\xingAsync\async_api.py" />
     <Compile Include="src\xingAsync\models.py" />
     <Compile Include="src\xingAsync\native.py" />
