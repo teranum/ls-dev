@@ -1,12 +1,14 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
 	<PropertyGroup>
-		<TargetFramework>net8.0</TargetFramework>
+		<TargetFramework>net8.0-windows</TargetFramework>
 		<ImplicitUsings>enable</ImplicitUsings>
 		<Nullable>enable</Nullable>
-		<Version>0.0.1-pre1</Version>
+		<UseWindowsForms>true</UseWindowsForms>
+		<Description>NET wrapper for LS XingApi</Description>
+		<Version>0.0.2-pre</Version>
 		<Title>LS.XingApi</Title>
-		<PackageTags>XingApi, ebest, LS</PackageTags>
+		<PackageTags>LS, eBEST, XingApi</PackageTags>
 		<Authors>teranum</Authors>
 		<Copyright>Copyright © teranum 2024</Copyright>
 		<PackageReadmeFile>README.md</PackageReadmeFile>
