@@ -13,9 +13,10 @@
 # User-specific files (MonoDevelop/Xamarin Studio)
 *.userprefs
 
-app_key.*
 env*/
-samples/
+app_key.*
+secret/
+dist/
 
 # Mono auto generated files
 mono_crash.*
