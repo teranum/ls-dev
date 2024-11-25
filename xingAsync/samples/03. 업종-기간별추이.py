@@ -13,7 +13,7 @@ async def sample(api: XingApi):
         "cnt": 100,         # 조회건수
         "rate_gbn": '2',    # 비중구분 (1: 거래량, 2: 거래대금)
         }
-    response = await api.request("t1514", "001   1          0100 2 ")
+    response = await api.request("t1514", inputs)
     if not response: return print(f'요청실패: {api.last_message}')
 
     print(response)

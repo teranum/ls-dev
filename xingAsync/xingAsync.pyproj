@@ -4,7 +4,7 @@
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>2b61bde3-bd81-4a96-8c74-65c0c03d8427</ProjectGuid>
     <ProjectHome>.</ProjectHome>
-    <StartupFile>samples\01. 로그인.py</StartupFile>
+    <StartupFile>samples\02. 업종-전체조회.py</StartupFile>
     <SearchPath>src</SearchPath>
     <WorkingDirectory>
     </WorkingDirectory>
@@ -28,9 +28,11 @@
     <Folder Include="src\xingAsync\" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="samples\01. 로그인_ID_비번.py" />
     <Compile Include="samples\00. 사용방법.py" />
     <Compile Include="samples\01. 로그인.py" />
     <Compile Include="samples\03. 업종-기간별추이.py" />
+    <Compile Include="samples\06. 주식-현재가.py" />
     <Compile Include="samples\common.py" />
     <Compile Include="src\xingAsync\async_api.py" />
     <Compile Include="src\xingAsync\models.py" />

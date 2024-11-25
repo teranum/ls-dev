@@ -22,9 +22,11 @@
     python '01. 로그인.py'
     
 
-5. 샘플 코드 일부는 PrettyTable, matplotlib 패키지를 사용합니다.
+5. 샘플 중 일부는 prettytable, matplotlib 패키지를 사용합니다.
     설치가 필요한 경우 아래 명령어로 설치합니다.
 
-    pip install PrettyTable
+    pip install prettytable
     pip install matplotlib
+
+
 """

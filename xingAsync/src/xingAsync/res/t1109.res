@@ -1,0 +1,29 @@
+BEGIN_FUNCTION_MAP
+	.Func,시간외체결량(t1109),t1109,attr,block,headtype=A;
+	BEGIN_DATA_MAP
+	t1109InBlock,기본입력,input;
+	begin
+		종목코드,shcode,shcode,char,6;
+		체결cts,dan_chetime,dan_chetime,char,10;
+		IDX,idx,idx,long,4;
+	end
+	t1109OutBlock,출력,output;
+	begin
+		종목cts,ctsshcode,ctsshcode,char,6;
+		체결cts,ctschetime,ctschetime,char,10;
+		IDX,idx,idx,long,4;
+	end
+	t1109OutBlock1,출력1,output,occurs;
+	begin
+		시간,dan_chetime,dan_chetime,char,10;
+		현재가,dan_price,dan_price,long,8;
+		전일대비구분,dan_sign,dan_sign,char,1;
+		전일대비,dan_change,dan_change,long,8;
+		등락율,diff,diff,float,6.2;
+		체결량,dan_cvolume,dan_cvolume,long,8;
+		체결강도,chdegree,chdegree,float,9.2;
+		누적거래량,dan_volume,dan_volume,long,12;
+	end
+	END_DATA_MAP
+END_FUNCTION_MAP
+

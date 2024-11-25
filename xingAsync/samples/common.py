@@ -71,6 +71,26 @@ def print(data, title=None):
         print_func(f'{data.tr_cd}: [{data.rsp_cd}] {data.rsp_msg}')
         keys = data.body.keys()
         for key in keys:
-            print_func(key)
-            print_func(data.body[key])
-        print_func(f'nRqID={data.nRqID}, cont_yn={data.cont_yn}, cont_key={data.cont_key}')
+            table = PrettyTable()
+            filed_names = [x.name for x in data[key + ".fields"]]
+            table.field_names = filed_names;
+            data_values = data[key]
+
+            if data_values is None:
+                print_func(f'{key}: None')
+                continue
+
+            if isinstance(data_values , str):
+                table.align = 'l'
+                lines = data_values.splitlines()
+                table.add_rows([[x] for x in lines])
+            elif isinstance(data_values , dict):
+                table.add_row(data_values.values())
+            else:
+                table.add_rows([x.values() for x in data_values])
+            print_func(f'{key}, Fields = {len(table.field_names)}, Count = {len(table.rows)}')
+            print_func(table)
+        print_func(f'request_id={data.id}, cont_yn={data.cont_yn}, cont_key={data.cont_key}')
+        table = PrettyTable(["response times(ms) local/server"])
+        table.add_rows([[x / 1000000] for x in data.ticks])
+        print_func(table)

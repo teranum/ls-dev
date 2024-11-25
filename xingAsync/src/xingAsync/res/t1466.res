@@ -1,0 +1,38 @@
+BEGIN_FUNCTION_MAP
+	.Func,전일동시간대비거래급증(t1466),t1466,attr,block,headtype=A;
+	BEGIN_DATA_MAP
+	t1466InBlock,기본입력,input;
+	begin
+		구분,gubun,gubun,char,1;
+		전일거래량,type1,type1,char,1;
+		거래급등율,type2,type2,char,1;
+		대상제외,jc_num,jc_num,long,12;
+		시작가격,sprice,sprice,long,8;
+		종료가격,eprice,eprice,long,8;
+		거래량,volume,volume,long,12;
+		IDX,idx,idx,long,4;
+		대상제외2,jc_num2,jc_num2,long,12;
+	end
+	t1466OutBlock,출력,output;
+	begin
+		현재시분,hhmm,hhmm,char,5;
+		IDX,idx,idx,long,4;
+	end
+	t1466OutBlock1,출력1,output,occurs;
+	begin
+		종목코드,shcode,shcode,char,6;
+		종목명,hname,hname,char,20;
+		현재가,price,price,long,8;
+		전일대비구분,sign,sign,char,1;
+		전일대비,change,change,long,8;
+		등락율,diff,diff,float,6.2;
+		전일거래량,stdvolume,stdvolume,long,12;
+		당일거래량,volume,volume,long,12;
+		거래급등율,voldiff,voldiff,float,8.2;
+		시가,open,open,long,8;
+		고가,high,high,long,8;
+		저가,low,low,long,8;
+	end
+	END_DATA_MAP
+END_FUNCTION_MAP
+
