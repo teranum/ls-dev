@@ -302,10 +302,15 @@ if __name__ == "__main__":
 
     infos = resManager._resources
 
-    print("inblock 개수가 2개 이상인 것들만 출력")
+    print("field size가 소수점 포함일 때, 타입이 float가 아닌 경우")
     for key in infos:
         value = infos[key]
-        if len(value.in_blocks) > 1:
-            print(f"{value.tr_cd}: {value.tr_desc} {len(value.in_blocks)}")
+
+        blocks = value.in_blocks + value.out_blocks
+
+        for block in blocks:
+            for field in block.fields:
+                if field.dot_size > 0 and field.var_type != FieldSpec.VarType.FLOAT:
+                    print(f"{key} - {block.name} - {field.name} : {field.var_type}({field.size}.{field.dot_size})")
 
     pass

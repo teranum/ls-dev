@@ -216,7 +216,6 @@ class XingApi:
                 # return value, error
                 size = field.size
                 if size == 0: return value, ''
-                size = field.size
                 str_val = ''
                 if field.var_type == FieldSpec.VarType.STRING:
                     if value is None:
@@ -240,8 +239,7 @@ class XingApi:
                         return str_val, 'overflow'
                     return str_val.rjust(size, '0'), ''
                 if field.var_type == FieldSpec.VarType.FLOAT:
-                    flag_B = res_info.headtype == 'B'
-                    if flag_B:
+                    if res_info.headtype == 'B':
                         if value is None:
                             str_val = '0'
                         else:
