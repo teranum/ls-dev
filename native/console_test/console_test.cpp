@@ -3,7 +3,7 @@
 
 #include <windows.h>
 #include <iostream>
-#include "../native/XingApi.h"
+#include "../XingApi.h"
 #include "../app_key.h"
 
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);

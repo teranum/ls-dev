@@ -5,8 +5,8 @@
 		<ImplicitUsings>enable</ImplicitUsings>
 		<Nullable>enable</Nullable>
 		<Version>0.0.1-pre1</Version>
-		<Title>LS.XingApi</Title>
-		<PackageTags>XingApi, ebest, LS</PackageTags>
+		<Title>LS.OpenApi</Title>
+		<PackageTags>XingApi, OpenApi, ebest, LS</PackageTags>
 		<Authors>teranum</Authors>
 		<Copyright>Copyright © teranum 2024</Copyright>
 		<PackageReadmeFile>README.md</PackageReadmeFile>
@@ -16,7 +16,7 @@
 		<PackageIcon>icon.png</PackageIcon>
 		<NoWarn>$(NoWarn);IDE0130</NoWarn>
 	</PropertyGroup>
-	
+
 	<ItemGroup>
 		<None Include="icon.png">
 			<Pack>True</Pack>
