@@ -109,7 +109,7 @@ class XingApi:
 
     def get_requests_count(self, tr_cd: str):
         """ TR의 초당 전송 가능 횟수, Base 시간(초단위), TR의 10분당 제한 건수, 10분내 요청한 해당 TR의 총 횟수를 반환합니다. """
-        tr_cd_b = tr_cd.encode('ansi')
+        tr_cd_b = tr_cd.encode(self.enc)
         per_sec:int = self._module.ETK_GetTRCountPerSec(tr_cd_b)
         base_sec:int = self._module.ETK_GetTRCountBaseSec(tr_cd_b)
         limit:int = self._module.ETK_GetTRCountLimit(tr_cd_b)
@@ -362,14 +362,14 @@ class XingApi:
                     response.body[res_info.in_blocks[0].name] = {'nrec':array_len}
                     o3127InBlock1 = []
                     indata_line = b""
-                    indata_line += str(array_len).rjust(4, '0').encode("ansi")
+                    indata_line += str(array_len).rjust(4, '0').encode(self.enc)
                     if res_info.is_attr:
                         indata_line += b" "
                     for mktgb, symbol in mktgb_symbols:
-                        indata_line += mktgb.encode("ansi")
+                        indata_line += mktgb.encode(self.enc)
                         if res_info.is_attr:
                             indata_line += b" "
-                        indata_line += symbol.ljust(16, ' ').encode("ansi")
+                        indata_line += symbol.ljust(16, ' ').encode(self.enc)
                         if res_info.is_attr:
                             indata_line += b" "
                         o3127InBlock1.append({'mktgb':mktgb, 'symbol':symbol})
@@ -476,7 +476,7 @@ class XingApi:
                             if nDataLength < 5:
                                 # errMsg = "수신 데이터 길이 오류."
                                 break
-                            str_count = ctypes.string_at(lpData, 5).decode('ansi')
+                            str_count = ctypes.string_at(lpData, 5).decode(self.enc)
                             nFrameCount = int(str_count)
                             lpData += 5
                             nDataLength -= 5
@@ -491,7 +491,7 @@ class XingApi:
                             row_datas = dict() # [None] * cols
                             for field in out_block.fields:
                                 size = field.size
-                                text_data = ctypes.string_at(lpData, size).rstrip(b'\0').decode('ansi', errors="ignore").strip()
+                                text_data = ctypes.string_at(lpData, size).rstrip(b'\0').decode(self.enc, errors="ignore").strip()
                                 text_len = len(text_data)
                                 try:
                                     if field.var_type == FieldSpec.VarType.INT:
@@ -589,11 +589,11 @@ class XingApi:
         self.last_message = ""
         return True
 
-    def advise_realtime(self, tr_cd:str, in_datas:str):
-        return self.realtime(tr_cd, in_datas, True)
+    # def advise_realtime(self, tr_cd:str, in_datas:str):
+    #     return self.realtime(tr_cd, in_datas, True)
 
-    def unadvise_realtime(self, tr_cd:str, in_datas:str):
-        return self.realtime(tr_cd, in_datas, False)
+    # def unadvise_realtime(self, tr_cd:str, in_datas:str):
+    #     return self.realtime(tr_cd, in_datas, False)
 
     def _window_proc(self, hwnd, wm_msg, wparam, lparam):
         xM: int = wm_msg - self.XM_MSG_BASE;
