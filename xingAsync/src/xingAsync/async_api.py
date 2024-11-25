@@ -2,7 +2,7 @@
 import time
 from datetime import datetime
 from xingAsync.models import AccountInfo, ResponseData
-from xingAsync.native import XING_MSG, RECV_FLAG, MSG_PACKET, RECV_PACKET
+from xingAsync.native import XING_MSG, RECV_FLAG, MSG_PACKET, RECV_PACKET, REAL_RECV_PACKET
 from xingAsync.resource import FieldSpec, ResInfo, ResourceManager
 
 class XingApi:
@@ -334,7 +334,7 @@ class XingApi:
 
             for i in range(in_block_field_count):
                 size = in_block.fields[i].size
-                enc_val = aligned_in_block_datas[i].encode("ansi")
+                enc_val = aligned_in_block_datas[i].encode(self.enc)
                 if len(enc_val) > size:
                     enc_val = enc_val[:size]
                 indata_line += enc_val
@@ -402,10 +402,7 @@ class XingApi:
             self.last_message = f"[{response.id}] {self.get_error_message(response.id)}"
             return None
         def callback(wparam, lparam):
-            if wparam == RECV_FLAG.RELEASE_DATA:
-                pass
-                # response.ticks.append(time.perf_counter_ns() - start_time)
-            elif wparam in [RECV_FLAG.MESSAGE_DATA, RECV_FLAG.SYSTEM_ERROR_DATA]:
+            if wparam in [RECV_FLAG.MESSAGE_DATA, RECV_FLAG.SYSTEM_ERROR_DATA]:
                 unpack_result = ctypes.cast(lparam, ctypes.POINTER(MSG_PACKET)).contents
                 response.rsp_cd = unpack_result.szMsgCode.decode(self.enc).strip()
                 response.rsp_msg = ctypes.string_at(unpack_result.szMessageData).decode(self.enc).strip()
@@ -537,6 +534,67 @@ class XingApi:
 
         return response
 
+    def realtime(self, tr_cd:str, in_datas:str, advise: bool):
+        """
+        advise / unadvise realtime data to server
+        """
+        if not self.logined:
+            self.last_message = "Not logined"
+            return False
+
+        if not advise and len(tr_cd) == 0 :
+            if self._module.ETK_UnadviseWindow(self._hwnd):
+                self.last_message = ""
+                return True
+            self.last_message = "모든 실시간 해제 실패."
+            return False
+
+        res_info = self.get_res_info(tr_cd)
+        if res_info is None:
+            self.last_message = "자원 정보를 찾을 수 없습니다."
+            return False
+
+        if res_info.is_func:
+            self.last_message = "실시간 요청이 아닙니다."
+            return False
+
+        in_datas = [x.strip() for x in in_datas.split(",")]
+        in_datas_count = len(in_datas)
+        in_blocks = res_info.in_blocks
+        in_blocks_count = len(in_blocks)
+        indata_line = b''
+        if in_blocks_count == 1:
+            in_block = res_info.in_blocks[0]
+            in_block_field_count = len(in_block.fields)
+            if in_block_field_count > 0:
+                field_inf = in_block.fields[0]
+                field_size = field_inf.size
+                for i in range(in_datas_count):
+                    enc_val = in_datas[i].encode(self.enc)
+                    enc_val = enc_val.ljust(field_size, b' ')
+                    indata_line += enc_val
+                    # if res_info.is_attr:
+                    #     indata_line += b" "
+
+        if advise:
+            ok = self._module.ETK_AdviseRealData(self._hwnd, tr_cd.encode(self.enc), indata_line, len(indata_line))
+        else:
+            ok = self._module.ETK_UnadviseRealData(self._hwnd, tr_cd.encode(self.enc), indata_line, len(indata_line))
+
+        if not ok:
+            err_code = self.get_last_error()
+            self.last_message = f"[{err_code}] {self.get_error_message(err_code)}"
+            return False
+
+        self.last_message = ""
+        return True
+
+    def advise_realtime(self, tr_cd:str, in_datas:str):
+        return self.realtime(tr_cd, in_datas, True)
+
+    def unadvise_realtime(self, tr_cd:str, in_datas:str):
+        return self.realtime(tr_cd, in_datas, False)
+
     def _window_proc(self, hwnd, wm_msg, wparam, lparam):
         xM: int = wm_msg - self.XM_MSG_BASE;
         if xM > 0 and xM < XING_MSG.XM_LAST:
@@ -550,7 +608,6 @@ class XingApi:
                             node.set()
                             break
 
-
                 case XING_MSG.XM_LOGOUT:
                     self.on_message._emit('XM_LOGOUT')
 
@@ -559,36 +616,88 @@ class XingApi:
 
                 case XING_MSG.XM_RECEIVE_DATA:
                     match wparam:
-                        case RECV_FLAG.REQUEST_DATA | RECV_FLAG.MESSAGE_DATA | RECV_FLAG.SYSTEM_ERROR_DATA:
+                        case RECV_FLAG.REQUEST_DATA:
                             hash_id = ctypes.cast(lparam, ctypes.POINTER(ctypes.c_int32)).contents.value
                             node = next((node for node in self._asyncNodes if node.hash_id == hash_id), None)
                             if node:
                                 node.async_evented = True
                                 node.callback(wparam, lparam)
-                            if wparam == RECV_FLAG.MESSAGE_DATA or wparam == RECV_FLAG.SYSTEM_ERROR_DATA:
-                                self._module.ETK_ReleaseMessageData(lparam);
 
-                        case RECV_FLAG.RELEASE_DATA:
-                            hash_id = lparam
+                        case RECV_FLAG.MESSAGE_DATA | RECV_FLAG.SYSTEM_ERROR_DATA:
+                            hash_id = ctypes.cast(lparam, ctypes.POINTER(ctypes.c_int32)).contents.value
                             node = next((node for node in self._asyncNodes if node.hash_id == hash_id), None)
                             if node:
+                                node.async_evented = True
                                 node.callback(wparam, lparam)
                                 node.set()
+                            self._module.ETK_ReleaseMessageData(lparam);
+
+                        case RECV_FLAG.RELEASE_DATA:
+                            hash_id = int(lparam)
                             self._module.ETK_ReleaseRequestData(lparam)
 
-                case XING_MSG.XM_RECEIVE_REAL_DATA:
-                    pass
-
                 case XING_MSG.XM_TIMEOUT_DATA:
-                    pass
+                    hash_id = int(lparam)
+                    node = next((node for node in self._asyncNodes if node.hash_id == hash_id), None)
+                    if node:
+                        node.async_result = -902
+                        node.set()
+                    self._module.ETK_ReleaseRequestData(hash_id);
+
+                case XING_MSG.XM_RECEIVE_REAL_DATA | XING_MSG.XM_RECEIVE_REAL_DATA_SEARCH | XING_MSG.XM_RECEIVE_REAL_DATA_CHART:
+                    unpack_result = ctypes.cast(lparam, ctypes.POINTER(REAL_RECV_PACKET)).contents
+
+                    szTrCode = unpack_result.szTrCode.decode(self.enc).strip()
+                    szKeyData = unpack_result.szKeyData.decode(self.enc).strip()
+                    nDataLength = unpack_result.nDataLength
+                    pszData = unpack_result.pszData
+
+                    if xM == XING_MSG.XM_RECEIVE_REAL_DATA_SEARCH:
+                        real_cd = "t1857"
+                    elif xM == XING_MSG.XM_RECEIVE_REAL_DATA_CHART:
+                        real_cd = "ChartIndex"
+                    else:
+                        real_cd = szTrCode
+
+                    res_info = self.get_res_info(real_cd)
+                    if res_info:
+                        if xM == XING_MSG.XM_RECEIVE_REAL_DATA_SEARCH or xM == XING_MSG.XM_RECEIVE_REAL_DATA_CHART:
+                            out_block = res_info.out_blocks[1]
+                        else:
+                            out_block = res_info.out_blocks[0]
+
+                        if nDataLength >= out_block.record_size:
+                            field_count = len(out_block.fields)
+                            parsed_datas = dict()
+                            for i in range(field_count):
+                                field = out_block.fields[i]
+                                size = field.size
+                                text_data = ctypes.string_at(pszData, size).decode(self.enc, errors="ignore").strip()
+                                text_len = len(text_data)
+                                if field.var_type == FieldSpec.VarType.INT:
+                                    if text_len == 0:
+                                        cell_data = 0
+                                    else:
+                                        cell_data = int(text_data)
+                                elif field.var_type == FieldSpec.VarType.FLOAT:
+                                    if text_len == 0:
+                                        cell_data = 0.0
+                                    else:
+                                        cell_data = float(text_data)
+                                        if field.dot_value > 0 and '.' not in text_data:
+                                            cell_data /= field.dot_value
+                                else:
+                                    cell_data = text_data
+                                parsed_datas[field.name] = cell_data
+                                if res_info.is_attr:
+                                    size += 1
+                                pszData += size
+                            self.on_realtime._emit(szTrCode, szKeyData, parsed_datas)
+                    else:
+                        bytes_data = ctypes.cast(pszData, ctypes.POINTER(ctypes.c_byte * nDataLength)).contents
+                        self.on_realtime._emit(szTrCode, szKeyData, list(bytes_data))
 
                 case XING_MSG.XM_RECEIVE_LINK_DATA:
-                    pass
-
-                case XING_MSG.XM_RECEIVE_REAL_DATA_CHART:
-                    pass
-
-                case XING_MSG.XM_RECEIVE_REAL_DATA_SEARCH:
                     pass
 
             return 0
@@ -609,7 +718,7 @@ class XingApi:
                 slot(*args)
 
     class _asyncNode:
-        def __init__(self, hashid, callback):
+        def __init__(self, hashid: int, callback):
             self.__event = asyncio.Event()
             self.hash_id = hashid
             self.async_evented : bool = False

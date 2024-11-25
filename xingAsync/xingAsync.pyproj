@@ -4,7 +4,7 @@
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>2b61bde3-bd81-4a96-8c74-65c0c03d8427</ProjectGuid>
     <ProjectHome>.</ProjectHome>
-    <StartupFile>samples\02. 업종-전체조회.py</StartupFile>
+    <StartupFile>samples\34. 해외선물-실시간시세-요청-중지.py</StartupFile>
     <SearchPath>src</SearchPath>
     <WorkingDirectory>
     </WorkingDirectory>
@@ -33,6 +33,8 @@
     <Compile Include="samples\01. 로그인.py" />
     <Compile Include="samples\03. 업종-기간별추이.py" />
     <Compile Include="samples\06. 주식-현재가.py" />
+    <Compile Include="samples\12. 실시간시세-요청-중지.py" />
+    <Compile Include="samples\34. 해외선물-실시간시세-요청-중지.py" />
     <Compile Include="samples\common.py" />
     <Compile Include="src\xingAsync\async_api.py" />
     <Compile Include="src\xingAsync\models.py" />
