@@ -15,6 +15,7 @@
 
 app_key.*
 env*/
+samples/
 
 # Mono auto generated files
 mono_crash.*
