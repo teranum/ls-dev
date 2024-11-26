@@ -32,7 +32,7 @@ class XingApi:
                 self._module = None
 
         self.xing_folder = xing_folder
-        # create window handle
+
         class_name = 'XingApiClientClass-' + str(time.perf_counter_ns())
         wc = win32gui.WNDCLASS()
         wc.lpfnWndProc = self._window_proc
@@ -50,10 +50,11 @@ class XingApi:
         self._res_manager = ResourceManager(self.xing_folder)
 
         self.last_message = str()
+        """ last message from XingAPI """
 
         self.on_message = self._xingSignal()
         """
-        메시지 핸들러 (서버연결 끊김, 로그아웃 등)
+        메시지 핸들러 (LOGOUT, DISCONNECT ...)
         on_message(msg: str)
         """
 
@@ -66,7 +67,7 @@ class XingApi:
     #properties
     @property
     def loaded(self):
-        """ return True if XingAPI.dll is loaded """
+        """ return True if xingAPI.dll is loaded """
         return self._module is not None
 
     @property
@@ -102,28 +103,12 @@ class XingApi:
             self._server_connected = False
 
     def get_res_info(self, tr_cd: str):
+        """ get resource information by tr_cd """
         return self._res_manager.get(tr_cd)
 
     def set_res_info(self, full_path: str):
+        """ set resource information from file """
         return self._res_manager.set_from_filepath(full_path)
-
-    def get_last_error(self):
-        """
-        get last error code
-        """
-        if not self._module:
-            return -1
-        return self._module.ETK_GetLastError()
-
-    def get_error_message(self, err_code: int) -> str:
-        """
-        get error message by code
-        """
-        if not self._module:
-            return "XingAPI.dll is not loaded"
-        buffer = ctypes.create_string_buffer(255)
-        self._module.ETK_GetErrorMessage(err_code, buffer, 255)
-        return buffer.value.decode(self.enc)
 
     def get_requests_count(self, tr_cd: str):
         """
@@ -138,7 +123,8 @@ class XingApi:
 
     async def login(self, user_id: str, user_pwd: str, cert_pwd: str = "") -> bool:
         """
-        login to server
+        서버에 로그인, 성공시 True 반환, 오류시 False 반환(last_message에 오류 메시지)
+        cert_pwd가 비어있으면 시뮬레이션 모드
         """
         if self.logined:
             self.last_message = "Already connected"
@@ -191,7 +177,7 @@ class XingApi:
                 self.last_message = "로그인 서버전송에 실패하였습니다."
         else:
             err_code = self._module.ETK_GetLastError()
-            self.last_message = f"[{err_code}] {self.get_error_message(err_code)}"
+            self.last_message = f"[{err_code}] {self._get_error_message(err_code)}"
         self.close()
         return False
 
@@ -397,7 +383,7 @@ class XingApi:
         response.id = nRqID
         response.ticks.append(time.perf_counter_ns() - start_time)
         if response.id < 0:
-            self.last_message = f"[{response.id}] {self.get_error_message(response.id)}"
+            self.last_message = f"[{response.id}] {self._get_error_message(response.id)}"
             return None
         def callback(wparam, lparam):
             if wparam in [RECV_FLAG.MESSAGE_DATA, RECV_FLAG.SYSTEM_ERROR_DATA]:
@@ -571,8 +557,8 @@ class XingApi:
             ok = self._module.ETK_UnadviseRealData(self._hwnd, tr_cd.encode(self.enc), indata_line, len(indata_line))
 
         if not ok:
-            err_code = self.get_last_error()
-            self.last_message = f"[{err_code}] {self.get_error_message(err_code)}"
+            err_code = self._get_last_error()
+            self.last_message = f"[{err_code}] {self._get_error_message(err_code)}"
             return False
 
         self.last_message = ""
@@ -584,10 +570,21 @@ class XingApi:
     # def unadvise_realtime(self, tr_cd:str, in_datas:str):
     #     return self.realtime(tr_cd, in_datas, False)
 
+    def _get_last_error(self):
+        if not self._module:
+            return -1
+        return self._module.ETK_GetLastError()
+
+    def _get_error_message(self, err_code: int) -> str:
+        if not self._module:
+            return "XingAPI.dll is not loaded"
+        buffer = ctypes.create_string_buffer(255)
+        self._module.ETK_GetErrorMessage(err_code, buffer, 255)
+        return buffer.value.decode(self.enc)
+
     def _window_proc(self, hwnd, wm_msg, wparam, lparam):
         xM: int = wm_msg - self.XM_MSG_BASE
         if xM > 0 and xM < XING_MSG.XM_LAST:
-            # print(f"XingApi._window_proc: {xM}-{wparam}-{lparam}")
             match xM:
                 case XING_MSG.XM_LOGIN:
                     hash_id = 0
@@ -598,10 +595,10 @@ class XingApi:
                             break
 
                 case XING_MSG.XM_LOGOUT:
-                    self.on_message.emit_signal('XM_LOGOUT')
+                    self.on_message.emit_signal('LOGOUT')
 
                 case XING_MSG.XM_DISCONNECT:
-                    self.on_message.emit_signal('XM_DISCONNECT')
+                    self.on_message.emit_signal('DISCONNECT')
 
                 case XING_MSG.XM_RECEIVE_DATA:
                     match wparam:
