@@ -134,7 +134,7 @@ namespace xing
 				response.rsp_msg = "Not logined!";
 				return response;
 			}
-			auto ret = ETK_Request(m_hWnd, tr_cd, indatas.c_str(), indatas.size(), bNext, next_key, nTimeOut);
+			auto ret = ETK_Request(m_hWnd, tr_cd, indatas.c_str(), (int)indatas.size(), bNext, next_key, nTimeOut);
 			if (ret < 0) {
 				response.rsp_cd = std::to_string(ret);
 				response.rsp_msg = get_error_message(ret);
@@ -204,7 +204,7 @@ namespace xing
 					break;
 				case RF::RELEASE_DATA:
 				{
-					int nRqID = lParam;
+					int nRqID = (int)lParam;
 					AsyncNode* node = m_asyncManager.GetNode(nRqID);
 					if (node) {
 						node->set();
