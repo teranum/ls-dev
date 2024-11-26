@@ -8,16 +8,22 @@
     <File Path="native/AsyncMsgManager.h" />
     <File Path="native/IXingApi.h" />
     <File Path="native/XingApi.h" />
-    <Project Path="native/xingAPI64/xingAPI64.vcxproj" Id="3f452101-323d-4dad-a0ff-af774525cf4f" />
-    <Project Path="native/xing_bridge/xing_bridge.vcxproj" Id="1ecd5c3e-636e-46e2-b12a-b54ce5e56a36" />
+    <Project Path="native/xingAPI64/xingAPI64.vcxproj" Id="3f452101-323d-4dad-a0ff-af774525cf4f">
+      <BuildDependency Project="native/xing_bridge/xing_bridge.vcxproj" />
+    </Project>
+    <Project Path="native/xing_bridge/xing_bridge.vcxproj" Id="1ecd5c3e-636e-46e2-b12a-b54ce5e56a36">
+      <Platform Solution="*|Any CPU" Project="Win32" />
+    </Project>
   </Folder>
   <Folder Name="/Solution Items/" Id="8ec462fd-d22e-90a8-e5ce-7e832ba40c5d">
     <File Path=".gitignore" />
   </Folder>
   <Project Path="console_test/console_test.vcxproj" Id="21bf7995-c4f0-40c1-9ca2-1a9eb6b271aa">
+    <BuildDependency Project="native/xingAPI64/xingAPI64.vcxproj" />
     <Platform Solution="Debug|Any CPU" Project="Win32" />
   </Project>
   <Project Path="win_test/win_test.vcxproj" Id="32f2d714-3c63-4db7-ac49-7002ec50abf6">
+    <BuildDependency Project="native/xingAPI64/xingAPI64.vcxproj" />
     <Platform Solution="Debug|Any CPU" Project="Win32" />
   </Project>
   <Project Path="xingAsync/xingAsync.pyproj" Type="888888a0-9f3d-457c-b088-3a5042f75d52" Id="2b61bde3-bd81-4a96-8c74-65c0c03d8427">
