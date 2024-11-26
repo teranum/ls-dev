@@ -31,9 +31,6 @@
   <ItemGroup>
     <Compile Include="test\login.py" />
     <Compile Include="secret\01. 로그인.py" />
-    <Compile Include="secret\06. 주식-현재가.py" />
-    <Compile Include="secret\common.py" />
-    <Compile Include="secret\Qt-로그인.py" />
     <Compile Include="secret\Qt-종합샘플.py" />
     <Compile Include="src\xingAsync\async_api.py" />
     <Compile Include="src\xingAsync\models.py" />

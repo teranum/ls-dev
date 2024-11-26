@@ -683,9 +683,9 @@ class XingApi:
                                     size += 1
                                 pszData += size
                             self.on_realtime.emit_signal(szTrCode, szKeyData, parsed_datas)
-                    else:
-                        bytes_data = ctypes.cast(pszData, ctypes.POINTER(ctypes.c_byte * nDataLength)).contents
-                        self.on_realtime.emit_signal(szTrCode, szKeyData, list(bytes_data))
+                    # else:
+                    #     bytes_data = ctypes.cast(pszData, ctypes.POINTER(ctypes.c_byte * nDataLength)).contents
+                    #     self.on_realtime.emit_signal(szTrCode, szKeyData, list(bytes_data))
 
                 case XING_MSG.XM_RECEIVE_LINK_DATA:
                     pass
