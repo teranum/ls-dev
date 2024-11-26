@@ -48,6 +48,7 @@ class XingApi:
         self._async_nodes: list[XingApi._asyncNode] = []
         self._accounts: list[AccountInfo] = []
         self._res_manager = ResourceManager(self.xing_folder)
+        self._mode = {}
 
         self.last_message = str()
         """ last message from XingAPI """
@@ -201,6 +202,11 @@ class XingApi:
         response = ResponseData()
         response.tr_cd = tr_cd
         response.tag = res_info
+        format_request = self._mode.get('format_request', 0) # 0(default): dict, 1: list
+        try:
+            format_request = int(format_request)
+        except :
+            format_request = 0
 
         # input reorder
         if isinstance(in_datas, str):
@@ -215,7 +221,7 @@ class XingApi:
             in_block = res_info.in_blocks[0]
             in_block_field_count = len(in_block.fields)
             aligned_in_block_datas = [None] * in_block_field_count
-            correct_in_block_dict = {}
+            correct_in_block_dict = {} if format_request == 0 else [None] * in_block_field_count
 
             def get_correct_field_value(field: FieldSpec, value: object) -> str:
                 # return value, error
@@ -299,7 +305,10 @@ class XingApi:
                         self.last_message = f"[{field.name}] {error}"
                         return None
                     aligned_in_block_datas[i] = str_val
-                    correct_in_block_dict[field.name] = str_val.strip()
+                    if format_request == 0:
+                        correct_in_block_dict[field.name] = str_val.strip()
+                    else:
+                        correct_in_block_dict[i] = str_val.strip()
             elif isinstance(in_datas, list):
                 indata_count = len(in_datas)
                 for i in range(in_block_field_count):
@@ -313,12 +322,15 @@ class XingApi:
                         self.last_message = f"[{field.name}] {error}"
                         return None
                     aligned_in_block_datas[i] = str_val
-                    correct_in_block_dict[field.name] = str_val.strip()
+                    if format_request == 0:
+                        correct_in_block_dict[field.name] = str_val.strip()
+                    else:
+                        correct_in_block_dict[i] = str_val.strip()
             else:
                 self.last_message = "입력 데이터 형식 오류"
                 return None
 
-            response.body[in_block.name] = correct_in_block_dict
+            response.body[in_block.name] = [correct_in_block_dict]
 
             for i in range(in_block_field_count):
                 size = in_block.fields[i].size
@@ -346,7 +358,10 @@ class XingApi:
                     if array_len == 0:
                         self.last_message = "입력 데이터 형식 오류"
                         return None
-                    response.body[res_info.in_blocks[0].name] = {'nrec':array_len}
+                    if format_request == 0:
+                        response.body[res_info.in_blocks[0].name] = [{'nrec':array_len}]
+                    else:
+                        response.body[res_info.in_blocks[0].name] = [[array_len]]
                     o3127InBlock1 = []
                     indata_line = b""
                     indata_line += str(array_len).rjust(4, '0').encode(self.enc)
@@ -359,7 +374,10 @@ class XingApi:
                         indata_line += symbol.ljust(16, ' ').encode(self.enc)
                         if res_info.is_attr:
                             indata_line += b" "
-                        o3127InBlock1.append({'mktgb':mktgb, 'symbol':symbol})
+                        if format_request == 0:
+                            o3127InBlock1.append({'mktgb':mktgb, 'symbol':symbol})
+                        else:
+                            o3127InBlock1.append([mktgb, symbol])
                     response.body[res_info.in_blocks[1].name] = o3127InBlock1
                 else:
                     self.last_message = "입력 데이터 형식 오류"
@@ -413,7 +431,7 @@ class XingApi:
                             rows, cols = (nFrameCount, len(out_block.fields))
                             datas = [None] * rows
                             for i in range(rows):
-                                row_datas = {}
+                                row_datas = {} if format_request == 0 else [None] * cols
                                 for j in range(cols):
                                     field = out_block.fields[j]
                                     size = field.size
@@ -436,17 +454,21 @@ class XingApi:
                                             cell_data = text_data
                                     except:
                                         cell_data = text_data
-                                    row_datas[field.name] = cell_data
+                                    if format_request == 0:
+                                        row_datas[field.name] = cell_data
+                                    else:
+                                        row_datas[j] = cell_data
                                     if res_info.is_attr:
                                         size += 1
                                     lpData += size
 
                                 datas[i] = row_datas
 
-                            if out_block.is_occurs:
-                                response.body[out_block.name] = datas
-                            else:
-                                response.body[out_block.name] = datas[0]
+                            response.body[out_block.name] = datas
+                            # if out_block.is_occurs:
+                            #     response.body[out_block.name] = datas
+                            # else:
+                            #     response.body[out_block.name] = datas[0]
                 else:
                     for out_block in out_blocks:
                         nFrameCount = 0
@@ -466,8 +488,9 @@ class XingApi:
                             # errMsg = "수신 데이터 길이 오류."
                             break
                         for i in range(rows):
-                            row_datas = {}
-                            for field in out_block.fields:
+                            row_datas = {} if format_request == 0 else [None] * cols
+                            for j in range(cols):
+                                field = out_block.fields[j]
                                 size = field.size
                                 text_data = ctypes.string_at(lpData, size).rstrip(b'\0').decode(self.enc, errors="ignore").strip()
                                 text_len = len(text_data)
@@ -488,17 +511,21 @@ class XingApi:
                                         cell_data = text_data
                                 except:
                                     cell_data = text_data
-                                row_datas[field.name] = cell_data
+                                if format_request == 0:
+                                    row_datas[field.name] = cell_data
+                                else:
+                                    row_datas[j] = cell_data
                                 if res_info.is_attr:
                                     size += 1
                                 lpData += size
                                 nDataLength -= size
                             datas[i] = row_datas
 
-                        if out_block.is_occurs:
-                            response.body[out_block.name] = datas
-                        else:
-                            response.body[out_block.name] = datas[0]
+                        response.body[out_block.name] = datas
+                        # if out_block.is_occurs:
+                        #     response.body[out_block.name] = datas
+                        # else:
+                        #     response.body[out_block.name] = datas[0]
 
         node = XingApi._asyncNode(response.id, callback)
         self._async_nodes.append(node)
@@ -563,6 +590,12 @@ class XingApi:
 
         self.last_message = ""
         return True
+
+    def set_mode(self, name: str, value: str):
+        self._mode[name] = value
+
+    def get_mode(self, name: str):
+        return self._mode.get(name, "")
 
     # def advise_realtime(self, tr_cd:str, in_datas:str):
     #     return self.realtime(tr_cd, in_datas, True)
@@ -656,9 +689,15 @@ class XingApi:
                         else:
                             out_block = res_info.out_blocks[0]
 
+                        format_realtime = self._mode.get('format_realtime', 0) # 0(default): dict, 1: list
+                        try:
+                            format_realtime = int(format_realtime)
+                        except :
+                            format_realtime = 0
+
                         if nDataLength >= out_block.record_size:
                             field_count = len(out_block.fields)
-                            parsed_datas = {}
+                            row_datas = {} if format_realtime == 0 else [None] * field_count
                             for i in range(field_count):
                                 field = out_block.fields[i]
                                 size = field.size
@@ -678,11 +717,14 @@ class XingApi:
                                             cell_data /= field.dot_value
                                 else:
                                     cell_data = text_data
-                                parsed_datas[field.name] = cell_data
+                                if format_realtime == 0:
+                                    row_datas[field.name] = cell_data
+                                else:
+                                    row_datas[i] = cell_data
                                 if res_info.is_attr:
                                     size += 1
                                 pszData += size
-                            self.on_realtime.emit_signal(szTrCode, szKeyData, parsed_datas)
+                            self.on_realtime.emit_signal(szTrCode, szKeyData, row_datas)
                     # else:
                     #     bytes_data = ctypes.cast(pszData, ctypes.POINTER(ctypes.c_byte * nDataLength)).contents
                     #     self.on_realtime.emit_signal(szTrCode, szKeyData, list(bytes_data))
