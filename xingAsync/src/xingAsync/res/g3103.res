@@ -1,0 +1,37 @@
+BEGIN_FUNCTION_MAP
+	.Func,해외주식API일주월별조회(g3103),g3103,attr,block,svr=GTS,headtype=A;
+	BEGIN_DATA_MAP
+	g3103InBlock,기본입력,input;
+	begin
+		지연구분,delaygb,delaygb,char,1;
+		KEY종목코드,keysymbol,keysymbol,char,18;
+		거래소코드,exchcd,exchcd,char,2;
+		종목코드,symbol,symbol,char,16;
+		주기구분,gubun,gubun,char,1;
+		조회일자,date,date,char,8;
+	end
+	g3103OutBlock,출력,output;
+	begin
+		지연구분,delaygb,delaygb,char,1;
+		KEY종목코드,keysymbol,keysymbol,char,18;
+		거래소코드,exchcd,exchcd,char,2;
+		종목코드,symbol,symbol,char,16;
+		주기구분,gubun,gubun,char,1;
+		조회일자,date,date,char,8;
+	end
+	g3103OutBlock1,출력1,output,occurs;
+	begin
+		영업일자,chedate,chedate,char,8;
+		현재가,price,price,double,15.6;
+		전일대비구분,sign,sign,char,1;
+		전일대비,diff,diff,double,15.6;
+		등락률,rate,rate,float,6.2;
+		누적거래량,volume,volume,long,16;
+		시가,open,open,double,15.6;
+		고가,high,high,double,15.6;
+		저가,low,low,double,15.6;
+		소숫점자릿수,floatpoint,floatpoint,char,1;
+	end
+	END_DATA_MAP
+END_FUNCTION_MAP
+

@@ -17,14 +17,14 @@ void xingapi_test(HWND hWnd)
 	// xingapi login, show accounts
 	//////////////////////////////////////////////
 
-    if (!api.Init("C:\\LS_SEC\\xingAPI\\xingAPI.dll"))
+    if (!api.Init(hWnd, "C:\\LS_SEC\\xingAPI\\xingAPI.dll"))
     {
         std::cerr << "Failed to load xingAPI.dll!" << std::endl;
         return;
     }
 
     // login
-    auto ret = api.login(hWnd, user_id, user_pwd, crt_pwd, 0, false);
+    auto ret = api.login(user_id, user_pwd, crt_pwd, 0, false);
     if (!ret) {
         std::cerr << "Failed to login: " << api.last_message << std::endl;
         return;

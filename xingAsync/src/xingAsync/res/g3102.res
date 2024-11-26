@@ -1,0 +1,41 @@
+BEGIN_FUNCTION_MAP
+	.Func,해외주식API시간대별(g3102),g3102,attr,block,svr=GTS,headtype=A;
+	BEGIN_DATA_MAP
+	g3102InBlock,기본입력,input;
+	begin
+		지연구분,delaygb,delaygb,char,1;
+		KEY종목코드,keysymbol,keysymbol,char,18;
+		거래소코드,exchcd,exchcd,char,2;
+		종목코드,symbol,symbol,char,16;
+		조회갯수,readcnt,readcnt,long,4;
+		연속시퀀스,cts_seq,cts_seq,long,17;
+	end
+	g3102OutBlock,출력,output;
+	begin
+		지연구분,delaygb,delaygb,char,1;
+		KEY종목코드,keysymbol,keysymbol,char,18;
+		거래소코드,exchcd,exchcd,char,2;
+		종목코드,symbol,symbol,char,16;
+		연속시퀀스,cts_seq,cts_seq,long,17;
+		레코드카운트,rec_count,rec_count,long,7;
+	end
+	g3102OutBlock1,출력1,output,occurs;
+	begin
+		현지일자,locdate,locdate,char,8;
+		현지시간,loctime,loctime,char,6;
+		한국일자,kordate,kordate,char,8;
+		한국시간,kortime,kortime,char,6;
+		현재가,price,price,double,15.6;
+		전일대비구분,sign,sign,char,1;
+		전일대비,diff,diff,double,15.6;
+		등락률,rate,rate,float,6.2;
+		시가,open,open,double,15.6;
+		고가,high,high,double,15.6;
+		저가,low,low,double,15.6;
+		체결량,exevol,exevol,long,10;
+		체결구분,cgubun,cgubun,char,1;
+		소숫점자릿수,floatpoint,floatpoint,char,1;
+	end
+	END_DATA_MAP
+END_FUNCTION_MAP
+
