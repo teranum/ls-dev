@@ -33,7 +33,7 @@ async def sample(api: XingApi):
         print(f'요청실패: {api.last_message}')
         return
 
-    price = response['t1102OutBlock']['price']
+    price = response['t1102OutBlock'][0]['price']
     print(f'삼성전자 현재가: {price}')
 
 
