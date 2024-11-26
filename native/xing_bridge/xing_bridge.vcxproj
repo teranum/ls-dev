@@ -153,6 +153,15 @@
   <ItemGroup>
     <ClCompile Include="xing_bridge.cpp" />
   </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="resource.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="xing_bridge.rc" />
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="xing_bridge.ico" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>

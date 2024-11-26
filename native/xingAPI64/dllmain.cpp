@@ -17,3 +17,5 @@ BOOL APIENTRY DllMain( HMODULE hModule,
     return TRUE;
 }
 
+#include "../shared.h"
+
