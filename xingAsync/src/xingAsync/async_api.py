@@ -190,7 +190,7 @@ class XingApi:
             return None
 
         if not res_info.is_func:
-            self.last_message = "실시간 요청은 advise_realtime 함수를 이용하세요."
+            self.last_message = "실시간 요청은 realtime 함수를 이용하세요."
             return None
 
         response = ResponseData()
@@ -216,7 +216,6 @@ class XingApi:
                 # return value, error
                 size = field.size
                 if size == 0: return value, ''
-                size = field.size
                 str_val = ''
                 if field.var_type == FieldSpec.VarType.STRING:
                     if value is None:

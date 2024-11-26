@@ -6,7 +6,6 @@ This is a simple package for aysnc XingApi (dll mode).
 
 ```bash
 pip install xingAsync
-from app_key import user_id, user_pwd, cert_pwd # app_key.py 파일에 사용자 ID, 비번, 공증 비번을 저장해두고 import
 ```
 
 ### 로그인 / 조회

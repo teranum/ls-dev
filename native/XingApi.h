@@ -1,4 +1,5 @@
 #pragma once
+#include <iostream>
 #include <sstream>
 
 #include "IXingApi.h"
@@ -46,7 +47,11 @@ namespace xing
 
 	public:
 		BOOL IsInit() const { return IXingApi::IsInit(); }
-		BOOL Init(LPCTSTR szPath) { return IXingApi::Init(szPath); }
+		BOOL Init(HWND hWnd, LPCTSTR szPath)
+		{
+			m_hWnd = hWnd;
+			return IXingApi::Init(szPath);
+		}
 		const auto& get_account_list() const { return account_list; };
 
 		std::string get_error_message(int err_code) {
@@ -55,7 +60,7 @@ namespace xing
 			return msg;
 		}
 
-		bool login(HWND hWnd, LPCSTR user_id, LPCSTR user_pwd, LPCSTR crt_pwd, int server_type, BOOL show_crt_pwd) {
+		bool login(LPCSTR user_id, LPCSTR user_pwd, LPCSTR crt_pwd, int server_type, BOOL show_crt_pwd) {
 			if (is_logined) {
 				last_message = "Already logined!";
 				return false;
@@ -66,15 +71,14 @@ namespace xing
 				return false;
 			}
 
-			m_hWnd = hWnd;
 			bool is_simulation = crt_pwd == nullptr || strlen(crt_pwd) == 0;
-			auto ret = ETK_Connect(hWnd, is_simulation ? simul_domain : real_domain, serveer_port, WM_USER, -1, -1);
+			auto ret = ETK_Connect(m_hWnd, is_simulation ? simul_domain : real_domain, serveer_port, WM_USER, -1, -1);
 			if (!ret) {
 				std::cerr << "Failed to connect!" << std::endl;
 				return 1;
 			}
 
-			ret = ETK_Login(hWnd, user_id, user_pwd, crt_pwd, server_type, show_crt_pwd);
+			ret = ETK_Login(m_hWnd, user_id, user_pwd, crt_pwd, server_type, show_crt_pwd);
 			if (!ret) {
 				last_message = "Failed to login!";
 				ETK_Disconnect();
