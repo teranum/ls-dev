@@ -10,9 +10,11 @@
     <File Path="native/XingApi.h" />
     <Project Path="native/xingAPI64/xingAPI64.vcxproj" Id="3f452101-323d-4dad-a0ff-af774525cf4f">
       <BuildDependency Project="native/xing_bridge/xing_bridge.vcxproj" />
+      <Platform Solution="Debug|x86" Project="x64" />
     </Project>
     <Project Path="native/xing_bridge/xing_bridge.vcxproj" Id="1ecd5c3e-636e-46e2-b12a-b54ce5e56a36">
       <Platform Solution="*|Any CPU" Project="Win32" />
+      <Platform Solution="Debug|x64" Project="Win32" />
     </Project>
   </Folder>
   <Folder Name="/Solution Items/" Id="8ec462fd-d22e-90a8-e5ce-7e832ba40c5d">
