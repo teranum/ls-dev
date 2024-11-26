@@ -15,15 +15,15 @@ async def sample(api: XingApi):
     response = await api.request('t1102', '005930') # 005930: 삼성전자
     if not response: return print(f'요청실패: {api.last_message}')
 
-    현재가 = response['t1102OutBlock']['price']
-    print(f'삼성전자 현재가: {현재가}')
+    price = response['t1102OutBlock']['price']
+    print(f'삼성전자 현재가: {price}')
 
 
 if __name__ == '__main__':
-    api = XingApi()
+    _api = XingApi()
     from qasync import QApplication, QEventLoop
     app = QApplication([])
     loop = QEventLoop(app)
     asyncio.set_event_loop(loop)
     with loop:
-        loop.run_until_complete(sample(api))
+        loop.run_until_complete(sample(_api))

@@ -1,17 +1,17 @@
-﻿import os
+﻿from enum import Enum
+import os
 import __main__
-from enum import Enum
 
 class FieldSpec:
     class VarType(Enum):
-        STRING = 0,
-        INT = 1,
-        FLOAT = 2,
+        STRING = 0
+        INT = 1
+        FLOAT = 2
 
-    def __init__(self, name: str, desc: str, type: str, size: float):
+    def __init__(self, name: str, desc: str, var_type: str, size: float):
         self.name = name
         self.desc = desc
-        match type:
+        match var_type:
             case "long" | "int":
                 varType = FieldSpec.VarType.INT
             case "float" | "double":
@@ -47,19 +47,17 @@ class BlockSpec:
         self.is_occurs = is_occurs
         self.fields: list[FieldSpec] = []
         self.record_size = 0
-        #
-        self.nTotalBuffer = 0
 
 class ResInfo:
     class RESFILE_READ_STATE(Enum):
-        NONE = 0,
-        FOUNDED_BEGIN_FUNCTION_MAP = 1,
-        FOUNDED_TR_TITLE = 2,
-        FOUNDED_BEGIN_DATA_MAP = 3,
-        FOUNDED_BLOCK_TITLE = 4,
-        FOUNDED_BLOCK_BEGIN = 5,
-        FOUNDED_BLOCK_END = 6,
-        FOUNDED_END_DATA_MAP = 7,
+        NONE = 0
+        FOUNDED_BEGIN_FUNCTION_MAP = 1
+        FOUNDED_TR_TITLE = 2
+        FOUNDED_BEGIN_DATA_MAP = 3
+        FOUNDED_BLOCK_TITLE = 4
+        FOUNDED_BLOCK_BEGIN = 5
+        FOUNDED_BLOCK_END = 6
+        FOUNDED_END_DATA_MAP = 7
         FOUNDED_END_FUNCTION_MAP = 8
 
     def __init__(self, filepath = ""):
@@ -76,56 +74,96 @@ class ResInfo:
         self.in_blocks: list[BlockSpec] = []
         self.out_blocks: list[BlockSpec] = []
 
-        if len(filepath):
+        if filepath:
             try:
                 with open(filepath, encoding="euc-kr") as f:
                     self.from_text(f.read())
-            except :
+            except:
                 pass
 
     def from_text(self, text: str):
-            self.res_text = text
-            lines = [x.strip() for x in self.res_text.splitlines()]
+        self.res_text = text
+        lines = [x.strip() for x in self.res_text.splitlines()]
 
-            readState = ResInfo.RESFILE_READ_STATE.NONE
+        readState = ResInfo.RESFILE_READ_STATE.NONE
 
-            blockSpec: BlockSpec = None
-            for line in lines:
-                if len(line) == 0:
-                    continue
+        blockSpec: BlockSpec = None
+        for line in lines:
+            if len(line) == 0:
+                continue
 
-                if readState == ResInfo.RESFILE_READ_STATE.NONE:
-                    if line == "BEGIN_FUNCTION_MAP":
-                        readState = ResInfo.RESFILE_READ_STATE.FOUNDED_BEGIN_FUNCTION_MAP
+            if readState == ResInfo.RESFILE_READ_STATE.NONE:
+                if line == "BEGIN_FUNCTION_MAP":
+                    readState = ResInfo.RESFILE_READ_STATE.FOUNDED_BEGIN_FUNCTION_MAP
+                else:
+                    break
+
+            elif readState == ResInfo.RESFILE_READ_STATE.FOUNDED_BEGIN_FUNCTION_MAP:
+                spec_fields = [x.strip() for x in line.split(';')[0].split(',')]
+                if spec_fields[0] == ".Func":
+                    self.is_func = True
+                elif spec_fields[0] != ".Feed":
+                    break
+                self.tr_desc = spec_fields[1]
+                self.tr_cd = spec_fields[2]
+
+                if len(spec_fields) > 3:
+                    for spec in spec_fields[3:]:
+                        if spec.startswith("headtype="):
+                            self.headtype = spec.split("=")[1]
+                        elif spec == "attr":
+                            self.is_attr = True
+                        elif spec == "block":
+                            self.is_block = True
+                readState = ResInfo.RESFILE_READ_STATE.FOUNDED_TR_TITLE
+
+            elif readState == ResInfo.RESFILE_READ_STATE.FOUNDED_TR_TITLE:
+                if line == "BEGIN_DATA_MAP":
+                    readState = ResInfo.RESFILE_READ_STATE.FOUNDED_BEGIN_DATA_MAP
+                else:
+                    break
+
+            elif readState == ResInfo.RESFILE_READ_STATE.FOUNDED_BEGIN_DATA_MAP:
+                spec_fields = [x.strip() for x in line.split(';')[0].split(',')]
+                block_name = spec_fields[0]
+                block_output = spec_fields[2] == "output"
+                block_occurs = len(spec_fields) > 3 and "occurs" in spec_fields[3:]
+
+                blockSpec = BlockSpec(block_name, block_output, block_occurs)
+                readState = ResInfo.RESFILE_READ_STATE.FOUNDED_BLOCK_TITLE
+
+            elif readState == ResInfo.RESFILE_READ_STATE.FOUNDED_BLOCK_TITLE:
+                if line == "begin":
+                    readState = ResInfo.RESFILE_READ_STATE.FOUNDED_BLOCK_BEGIN
+                else:
+                    break
+
+            elif readState == ResInfo.RESFILE_READ_STATE.FOUNDED_BLOCK_BEGIN:
+                if line == "end":
+                    record_size = 0
+                    for field in blockSpec.fields:
+                        record_size += field.size
+                    if record_size > 0 and self.is_attr:
+                        record_size += len(blockSpec.fields)
+                    blockSpec.record_size = record_size
+                    if blockSpec.is_output:
+                        self.out_blocks.append(blockSpec)
                     else:
-                        break
-
-                elif readState == ResInfo.RESFILE_READ_STATE.FOUNDED_BEGIN_FUNCTION_MAP:
+                        self.in_blocks.append(blockSpec)
+                    blockSpec = None
+                    readState = ResInfo.RESFILE_READ_STATE.FOUNDED_BLOCK_END
+                else:
                     spec_fields = [x.strip() for x in line.split(';')[0].split(',')]
-                    if spec_fields[0] == ".Func":
-                        self.is_func = True
-                    elif spec_fields[0] != ".Feed":
-                        break
-                    self.tr_desc = spec_fields[1]
-                    self.tr_cd = spec_fields[2]
+                    field_desc = spec_fields[0]
+                    field_name = spec_fields[1]
+                    field_type = spec_fields[3]
+                    field_size = float(spec_fields[4])
+                    blockSpec.fields.append(FieldSpec(field_name, field_desc, field_type, field_size))
 
-                    if len(spec_fields) > 3:
-                        for spec in spec_fields[3:]:
-                            if spec.startswith("headtype="):
-                                self.headtype = spec.split("=")[1]
-                            elif spec == "attr":
-                                self.is_attr = True
-                            elif spec == "block":
-                                self.is_block = True
-                    readState = ResInfo.RESFILE_READ_STATE.FOUNDED_TR_TITLE
-
-                elif readState == ResInfo.RESFILE_READ_STATE.FOUNDED_TR_TITLE:
-                    if line == "BEGIN_DATA_MAP":
-                        readState = ResInfo.RESFILE_READ_STATE.FOUNDED_BEGIN_DATA_MAP
-                    else:
-                        break
-
-                elif readState == ResInfo.RESFILE_READ_STATE.FOUNDED_BEGIN_DATA_MAP:
+            elif readState == ResInfo.RESFILE_READ_STATE.FOUNDED_BLOCK_END:
+                if line == "END_DATA_MAP":
+                    readState = ResInfo.RESFILE_READ_STATE.FOUNDED_END_DATA_MAP
+                else:
                     spec_fields = [x.strip() for x in line.split(';')[0].split(',')]
                     block_name = spec_fields[0]
                     block_output = spec_fields[2] == "output"
@@ -134,60 +172,21 @@ class ResInfo:
                     blockSpec = BlockSpec(block_name, block_output, block_occurs)
                     readState = ResInfo.RESFILE_READ_STATE.FOUNDED_BLOCK_TITLE
 
-                elif readState == ResInfo.RESFILE_READ_STATE.FOUNDED_BLOCK_TITLE:
-                    if line == "begin":
-                        readState = ResInfo.RESFILE_READ_STATE.FOUNDED_BLOCK_BEGIN
-                    else:
-                        break
+            elif readState == ResInfo.RESFILE_READ_STATE.FOUNDED_END_DATA_MAP:
+                if line == "END_FUNCTION_MAP":
+                    readState = ResInfo.RESFILE_READ_STATE.FOUNDED_END_FUNCTION_MAP
+                else:
+                    break
 
-                elif readState == ResInfo.RESFILE_READ_STATE.FOUNDED_BLOCK_BEGIN:
-                    if line == "end":
-                        record_size = 0
-                        for field in blockSpec.fields:
-                            record_size += field.size
-                        if record_size > 0 and self.is_attr:
-                            record_size += len(blockSpec.fields)
-                        blockSpec.record_size = record_size
-                        if blockSpec.is_output:
-                            self.out_blocks.append(blockSpec)
-                        else:
-                            self.in_blocks.append(blockSpec)
-                        blockSpec = None
-                        readState = ResInfo.RESFILE_READ_STATE.FOUNDED_BLOCK_END
-                    else:
-                        spec_fields = [x.strip() for x in line.split(';')[0].split(',')]
-                        field_desc = spec_fields[0]
-                        field_name = spec_fields[1]
-                        field_type = spec_fields[3]
-                        field_size = float(spec_fields[4])
-                        blockSpec.fields.append(FieldSpec(field_name, field_desc, field_type, field_size))
-
-                elif readState == ResInfo.RESFILE_READ_STATE.FOUNDED_BLOCK_END:
-                    if line == "END_DATA_MAP":
-                        readState = ResInfo.RESFILE_READ_STATE.FOUNDED_END_DATA_MAP
-                    else:
-                        spec_fields = [x.strip() for x in line.split(';')[0].split(',')]
-                        block_name = spec_fields[0]
-                        block_output = spec_fields[2] == "output"
-                        block_occurs = len(spec_fields) > 3 and "occurs" in spec_fields[3:]
-
-                        blockSpec = BlockSpec(block_name, block_output, block_occurs)
-                        readState = ResInfo.RESFILE_READ_STATE.FOUNDED_BLOCK_TITLE
-
-                elif readState == ResInfo.RESFILE_READ_STATE.FOUNDED_END_DATA_MAP:
-                    if line == "END_FUNCTION_MAP":
-                        readState = ResInfo.RESFILE_READ_STATE.FOUNDED_END_FUNCTION_MAP
-                    else:
-                        break
-
-            if readState == ResInfo.RESFILE_READ_STATE.FOUNDED_END_FUNCTION_MAP:
-                self.is_correct = True
+        if readState == ResInfo.RESFILE_READ_STATE.FOUNDED_END_FUNCTION_MAP:
+            self.is_correct = True
 
 class ResourceManager:
-    def __init__(self):
-        self._res_folder = os.path.dirname(os.path.abspath(__file__)) + "\\res"
+    def __init__(self, xing_folder = ""):
+        self._package_folder = os.path.dirname(os.path.abspath(__file__))
         self._user_folder = os.path.dirname(os.path.abspath(__main__.__file__))
-        self._resources: dict[str, ResInfo] = dict()
+        self._xing_folder = xing_folder
+        self._resources: dict[str, ResInfo] = {}
 
         res_c0003 = ('''\
             BEGIN_FUNCTION_MAP
@@ -230,8 +229,6 @@ class ResourceManager:
         ''')
         self.set_from_text(res_UFR)
 
-        # self.load_from_folder(os.path.dirname(os.path.abspath(__file__)) + "\\res")
-
     def set_from_text(self, text: str) :
         res_info = ResInfo()
         res_info.from_text(text)
@@ -255,7 +252,7 @@ class ResourceManager:
                     res_info = ResInfo(folderpath + "\\" + file)
                     if res_info.is_correct and res_info.tr_cd not in self._resources:
                         self._resources[res_info.tr_cd] = res_info
-        except :
+        except:
             pass
 
     def get(self, code: str) -> ResInfo | None:
@@ -266,31 +263,21 @@ class ResourceManager:
             return None
 
         # load from file at res folder
-        path = self._res_folder + "\\" + code + ".res"
-        if os.path.exists(path):
-            res_info = ResInfo(path)
-            if code != res_info.tr_cd:
-                return None
-            self._resources[code] = res_info
-            if res_info.is_correct:
-                return res_info
-        else:
-            # load from file at user folder
-            path = self._user_folder + "\\" + code + ".res"
-            if os.path.exists(path):
-                res_info = ResInfo(path)
-                if code != res_info.tr_cd:
-                    return None
-                self._resources[res_info.tr_cd] = res_info
-                if res_info.is_correct:
-                    return res_info
+        filename = code + ".res"
+        path = self._package_folder + "\\res\\" + filename # package res folder
+        if not os.path.exists(path):
+            path = self._user_folder + "\\" + filename # user folder
+            if not os.path.exists(path):
+                path = self._user_folder + "\\res\\" + filename # user res folder
+                if not os.path.exists(path):
+                    path = self._xing_folder + "\\res\\" + filename # xing res folder
+                    if not os.path.exists(path):
+                        path = ""
 
-        # res_info = ResInfo(self._user_folder + "\\" + code + ".res")
-        # if code != res_info.tr_cd:
-        #     return None
-        # self._resources[code] = res_info
-        # if res_info.is_correct:
-        #     return res_info
+        res_info = ResInfo(path)
+        self._resources[code] = res_info
+        if res_info.is_correct:
+            return res_info
 
         return None
 
@@ -302,10 +289,11 @@ if __name__ == "__main__":
 
     infos = resManager._resources
 
-    print("inblock 개수가 2개 이상인 것들만 출력")
-    for key in infos:
-        value = infos[key]
+    for key, value in infos.items():
+        # check in_blocks count
         if len(value.in_blocks) > 1:
-            print(f"{value.tr_cd}: {value.tr_desc} {len(value.in_blocks)}")
+            print(f"{value.tr_cd}: {value.tr_desc} in_blocks count = {len(value.in_blocks)}")
 
-    pass
+        #check headtype is not A
+        if value.headtype not in ["A", ""]:
+            print(f"{value.tr_cd}: {value.tr_desc} headtype = {value.headtype}")

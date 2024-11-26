@@ -5,19 +5,33 @@ from xingAsync.resource import FieldSpec, ResourceManager
 
 class XingApi:
     real_domain = b"api.ls-sec.co.kr"
-    simul_domain = b"demo.ls-sec.co.kr";
+    simul_domain = b"demo.ls-sec.co.kr"
     XM_MSG_BASE: int = 1024
     enc = 'euc-kr'
 
-    def __init__(self, xing_folder: str = "C:/LS_SEC/xingAPI"):
-        self.xing_folder = xing_folder
-        full_path = os.path.join(xing_folder, "xingAPI.dll")
+    def __init__(self, xing_folder: str = "C:\\LS_SEC\\xingAPI"):
+        dll_path = os.path.join(xing_folder, "xingAPI.dll")
 
         try:
-            self._module = ctypes.WinDLL(full_path)
-        except :
+            self._module = ctypes.WinDLL(dll_path)
+        except:
             self._module = None
 
+        if not self._module:
+            import winreg as wrg
+            try:
+                regKey = wrg.OpenKeyEx(wrg.HKEY_CLASSES_ROOT, r"CLSID\\{7FEF321C-6BFD-413C-AA80-541A275434A1}\\InprocServer32")
+                def_value = wrg.QueryValueEx(regKey, None)
+                wrg.CloseKey(regKey)
+                if len(def_value[0]) > 0:
+                    registry_folder = os.path.dirname(def_value[0])
+                    dll_path = os.path.join(registry_folder, "xingAPI.dll")
+                    self._module = ctypes.WinDLL(dll_path)
+                    xing_folder = registry_folder
+            except:
+                self._module = None
+
+        self.xing_folder = xing_folder
         # create window handle
         class_name = 'XingApiClientClass-' + str(time.perf_counter_ns())
         wc = win32gui.WNDCLASS()
@@ -31,25 +45,23 @@ class XingApi:
         self._server_connected = False
         self._user_logined = False
         self._is_simulation = False
-        self._asyncNodes: list[XingApi._asyncNode] = []
+        self._async_nodes: list[XingApi._asyncNode] = []
         self._accounts: list[AccountInfo] = []
-        self._resManager = ResourceManager()
+        self._res_manager = ResourceManager(self.xing_folder)
 
         self.last_message = str()
 
-        self.on_message = self._xing_signal()
+        self.on_message = self._xingSignal()
         """
         메시지 핸들러 (서버연결 끊김, 로그아웃 등)
         on_message(msg: str)
         """
 
-        self.on_realtime = self._xing_signal()
+        self.on_realtime = self._xingSignal()
         """
         실시간 이벤트 핸들러
         on_realtime(tr_cd: str, key: str, datas: dict | list)
         """
-
-        pass
 
     #properties
     @property
@@ -76,7 +88,7 @@ class XingApi:
         """
         close XingAPI
         """
-        if self._module == None:
+        if not self._module:
             return
 
         self._accounts.clear()
@@ -90,16 +102,24 @@ class XingApi:
             self._server_connected = False
 
     def get_res_info(self, tr_cd: str):
-        return self._resManager.get(tr_cd)
+        return self._res_manager.get(tr_cd)
 
     def set_res_info(self, full_path: str):
-        return self._resManager.set_from_filepath(full_path)
+        return self._res_manager.set_from_filepath(full_path)
+
+    def get_last_error(self):
+        """
+        get last error code
+        """
+        if not self._module:
+            return -1
+        return self._module.ETK_GetLastError()
 
     def get_error_message(self, err_code: int) -> str:
         """
         get error message by code
         """
-        if self._module == None:
+        if not self._module:
             return "XingAPI.dll is not loaded"
         buffer = ctypes.create_string_buffer(255)
         self._module.ETK_GetErrorMessage(err_code, buffer, 255)
@@ -124,7 +144,7 @@ class XingApi:
             self.last_message = "Already connected"
             return True
 
-        if self._module == None:
+        if not self._module:
             self.last_message = "XingAPI.dll is not loaded"
             return False
 
@@ -140,11 +160,10 @@ class XingApi:
                 def callback(wparam, lparam):
                     code_msg[0] = ctypes.string_at(wparam).decode(self.enc)
                     code_msg[1] = ctypes.string_at(lparam).decode(self.enc)
-                    pass
                 node = XingApi._asyncNode(0, callback)
-                self._asyncNodes.append(node)
+                self._async_nodes.append(node)
                 await node.wait()
-                self._asyncNodes.remove(node)
+                self._async_nodes.remove(node)
                 self.last_message = f"[{code_msg[0]}] {code_msg[1]}"
                 if code_msg[0] == "0000":
                     self.last_message = code_msg[1]
@@ -169,7 +188,7 @@ class XingApi:
                     self._user_logined = True
                     return True
             else:
-                self.last_message = f"로그인 서버전송에 실패하였습니다."
+                self.last_message = "로그인 서버전송에 실패하였습니다."
         else:
             err_code = self._module.ETK_GetLastError()
             self.last_message = f"[{err_code}] {self.get_error_message(err_code)}"
@@ -210,7 +229,7 @@ class XingApi:
             in_block = res_info.in_blocks[0]
             in_block_field_count = len(in_block.fields)
             aligned_in_block_datas = [None] * in_block_field_count
-            correct_in_block_dict = dict()
+            correct_in_block_dict = {}
 
             def get_correct_field_value(field: FieldSpec, value: object) -> str:
                 # return value, error
@@ -233,7 +252,7 @@ class XingApi:
                     else:
                         try:
                             str_val = str(int(value))
-                        except :
+                        except:
                             return str(value), 'invalid int value'
                     if len(str_val) > size:
                         return str_val, 'overflow'
@@ -246,7 +265,7 @@ class XingApi:
                         else:
                             try:
                                 str_val = str(float(value))
-                            except :
+                            except:
                                 return str(value), 'invalid float value'
                         if '.' not in str_val:
                             str_val += '.'
@@ -261,26 +280,25 @@ class XingApi:
                         if len(str_val) > size:
                             return str_val, 'overflow'
                         return str_val.rjust(size, '0'), ''
+                    if value is None:
+                        str_val = '0'
                     else:
-                        if value is None:
-                            str_val = '0'
+                        try:
+                            str_val = str(float(value))
+                        except:
+                            return str(value), 'invalid float value'
+                    if '.' not in str_val:
+                        str_val += '0' * field.dot_size
+                    else:
+                        dot_pos = str_val.index('.')
+                        dot_len = len(str_val) - dot_pos - 1
+                        if dot_len > field.dot_size:
+                            str_val = str_val[:dot_pos + field.dot_size]
                         else:
-                            try:
-                                str_val = str(float(value))
-                            except :
-                                return str(value), 'invalid float value'
-                        if '.' not in str_val:
-                            str_val += '0' * field.dot_size
-                        else:
-                            dot_pos = str_val.index('.')
-                            dot_len = len(str_val) - dot_pos - 1
-                            if dot_len > field.dot_size:
-                                str_val = str_val[:dot_pos + field.dot_size]
-                            else:
-                                str_val += '0' * (field.dot_size - dot_len)
-                        if len(str_val) > size:
-                            return str_val, 'overflow'
-                        return str_val.rjust(size, '0'), ''
+                            str_val += '0' * (field.dot_size - dot_len)
+                    if len(str_val) > size:
+                        return str_val, 'overflow'
+                    return str_val.rjust(size, '0'), ''
                 return value, 'invalid type'
 
             if isinstance(in_datas, dict):
@@ -333,7 +351,7 @@ class XingApi:
                         if len(in_data) > 2:
                             mktgb: str = in_data[0]
                             symbol = in_data[1:]
-                            if mktgb == 'F' or mktgb == 'O':
+                            if mktgb in ['F', 'O']:
                                 mktgb_symbols.append((mktgb, symbol))
                                 continue
                         self.last_message = "입력 데이터 형식 오류"
@@ -390,8 +408,8 @@ class XingApi:
                     num_code = int(response.rsp_cd)
                     if num_code < 0:
                         response.id = num_code
-                except :
-                    response.id = -1;
+                except:
+                    response.id = -1
             elif wparam == RECV_FLAG.REQUEST_DATA:
                 unpack_result = ctypes.cast(lparam, ctypes.POINTER(RECV_PACKET)).contents
                 response.cont_yn = unpack_result.cCont == b'1'
@@ -409,7 +427,7 @@ class XingApi:
                             rows, cols = (nFrameCount, len(out_block.fields))
                             datas = [None] * rows
                             for i in range(rows):
-                                row_datas = dict()
+                                row_datas = {}
                                 for j in range(cols):
                                     field = out_block.fields[j]
                                     size = field.size
@@ -430,8 +448,7 @@ class XingApi:
                                                     cell_data /= field.dot_value
                                         else:
                                             cell_data = text_data
-                                        pass
-                                    except :
+                                    except:
                                         cell_data = text_data
                                     row_datas[field.name] = cell_data
                                     if res_info.is_attr:
@@ -463,7 +480,7 @@ class XingApi:
                             # errMsg = "수신 데이터 길이 오류."
                             break
                         for i in range(rows):
-                            row_datas = dict() # [None] * cols
+                            row_datas = {}
                             for field in out_block.fields:
                                 size = field.size
                                 text_data = ctypes.string_at(lpData, size).rstrip(b'\0').decode(self.enc, errors="ignore").strip()
@@ -483,7 +500,7 @@ class XingApi:
                                                 cell_data /= field.dot_value
                                     else:
                                         cell_data = text_data
-                                except :
+                                except:
                                     cell_data = text_data
                                 row_datas[field.name] = cell_data
                                 if res_info.is_attr:
@@ -498,10 +515,10 @@ class XingApi:
                             response.body[out_block.name] = datas[0]
 
         node = XingApi._asyncNode(response.id, callback)
-        self._asyncNodes.append(node)
+        self._async_nodes.append(node)
         await node.wait(self._default_timeout)
         response.ticks.append(time.perf_counter_ns() - start_time)
-        self._asyncNodes.remove(node)
+        self._async_nodes.remove(node)
         self.last_message = f"[{response.rsp_cd}] {response.rsp_msg}"
         if response.id < 0:
             return None
@@ -568,45 +585,45 @@ class XingApi:
     #     return self.realtime(tr_cd, in_datas, False)
 
     def _window_proc(self, hwnd, wm_msg, wparam, lparam):
-        xM: int = wm_msg - self.XM_MSG_BASE;
+        xM: int = wm_msg - self.XM_MSG_BASE
         if xM > 0 and xM < XING_MSG.XM_LAST:
             # print(f"XingApi._window_proc: {xM}-{wparam}-{lparam}")
             match xM:
                 case XING_MSG.XM_LOGIN:
                     hash_id = 0
-                    for node in self._asyncNodes:
+                    for node in self._async_nodes:
                         if node.hash_id == hash_id:
                             node.callback(wparam, lparam)
                             node.set()
                             break
 
                 case XING_MSG.XM_LOGOUT:
-                    self.on_message._emit('XM_LOGOUT')
+                    self.on_message.emit_signal('XM_LOGOUT')
 
                 case XING_MSG.XM_DISCONNECT:
-                    self.on_message._emit('XM_DISCONNECT')
+                    self.on_message.emit_signal('XM_DISCONNECT')
 
                 case XING_MSG.XM_RECEIVE_DATA:
                     match wparam:
                         case RECV_FLAG.REQUEST_DATA:
                             hash_id = ctypes.cast(lparam, ctypes.POINTER(ctypes.c_int32)).contents.value
-                            node = next((node for node in self._asyncNodes if node.hash_id == hash_id), None)
+                            node = next((node for node in self._async_nodes if node.hash_id == hash_id), None)
                             if node:
                                 node.async_evented = True
                                 node.callback(wparam, lparam)
 
                         case RECV_FLAG.MESSAGE_DATA | RECV_FLAG.SYSTEM_ERROR_DATA:
                             hash_id = ctypes.cast(lparam, ctypes.POINTER(ctypes.c_int32)).contents.value
-                            node = next((node for node in self._asyncNodes if node.hash_id == hash_id), None)
+                            node = next((node for node in self._async_nodes if node.hash_id == hash_id), None)
                             if node:
                                 node.async_evented = True
                                 node.callback(wparam, lparam)
                                 node.set()
-                            self._module.ETK_ReleaseMessageData(lparam);
+                            self._module.ETK_ReleaseMessageData(lparam)
 
                         case RECV_FLAG.RELEASE_DATA:
                             hash_id = int(lparam)
-                            node = next((node for node in self._asyncNodes if node.hash_id == hash_id), None)
+                            node = next((node for node in self._async_nodes if node.hash_id == hash_id), None)
                             if node:
                                 node.async_evented = True
                                 node.set()
@@ -614,11 +631,11 @@ class XingApi:
 
                 case XING_MSG.XM_TIMEOUT_DATA:
                     hash_id = int(lparam)
-                    node = next((node for node in self._asyncNodes if node.hash_id == hash_id), None)
+                    node = next((node for node in self._async_nodes if node.hash_id == hash_id), None)
                     if node:
                         node.async_result = -902
                         node.set()
-                    self._module.ETK_ReleaseRequestData(hash_id);
+                    self._module.ETK_ReleaseRequestData(hash_id)
 
                 case XING_MSG.XM_RECEIVE_REAL_DATA | XING_MSG.XM_RECEIVE_REAL_DATA_SEARCH | XING_MSG.XM_RECEIVE_REAL_DATA_CHART:
                     unpack_result = ctypes.cast(lparam, ctypes.POINTER(REAL_RECV_PACKET)).contents
@@ -637,14 +654,14 @@ class XingApi:
 
                     res_info = self.get_res_info(real_cd)
                     if res_info:
-                        if xM == XING_MSG.XM_RECEIVE_REAL_DATA_SEARCH or xM == XING_MSG.XM_RECEIVE_REAL_DATA_CHART:
+                        if xM in [XING_MSG.XM_RECEIVE_REAL_DATA_SEARCH, xM == XING_MSG.XM_RECEIVE_REAL_DATA_CHART]:
                             out_block = res_info.out_blocks[1]
                         else:
                             out_block = res_info.out_blocks[0]
 
                         if nDataLength >= out_block.record_size:
                             field_count = len(out_block.fields)
-                            parsed_datas = dict()
+                            parsed_datas = {}
                             for i in range(field_count):
                                 field = out_block.fields[i]
                                 size = field.size
@@ -668,10 +685,10 @@ class XingApi:
                                 if res_info.is_attr:
                                     size += 1
                                 pszData += size
-                            self.on_realtime._emit(szTrCode, szKeyData, parsed_datas)
+                            self.on_realtime.emit_signal(szTrCode, szKeyData, parsed_datas)
                     else:
                         bytes_data = ctypes.cast(pszData, ctypes.POINTER(ctypes.c_byte * nDataLength)).contents
-                        self.on_realtime._emit(szTrCode, szKeyData, list(bytes_data))
+                        self.on_realtime.emit_signal(szTrCode, szKeyData, list(bytes_data))
 
                 case XING_MSG.XM_RECEIVE_LINK_DATA:
                     pass
@@ -679,17 +696,17 @@ class XingApi:
             return 0
 
         return win32gui.DefWindowProc(hwnd, wm_msg, wparam, lparam)
-
-    class _xing_signal:
+    
+    class _xingSignal:
         def __init__(self):
             self.__slots = []
         def connect(self, slot):
             self.__slots.append(slot)
         def disconnect(self, slot):
             self.__slots.remove(slot)
-        def disconnect(self):
+        def disconnect_all(self):
             self.__slots.clear()
-        def _emit(self, *args):
+        def emit_signal(self, *args):
             for slot in self.__slots:
                 slot(*args)
 
