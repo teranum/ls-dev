@@ -29,6 +29,7 @@
     <Folder Include="src\xingAsync\" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="secret\common.py" />
     <Compile Include="test\login.py" />
     <Compile Include="secret\01. 로그인.py" />
     <Compile Include="secret\Qt-종합샘플.py" />

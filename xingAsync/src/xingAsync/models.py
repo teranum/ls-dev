@@ -35,25 +35,26 @@ class ResponseData:
         self.body: dict[str, list | dict] = {}
         ''' 응답 데이터 '''
 
-        self.tag = None
+        self.res = None
         ''' 자원정보 '''
         # self.times: list = []
         # ''' 요청/응답시간 '''
 
         self.ticks: list[int] = []
 
-    def __getitem__(self, key: str, /) -> list | None: 
+    def __getitem__(self, key: str, /) -> dict | list | None: 
         result = self.body.get(key, None)
         if result is not None:
             return result
-        if key.endswith('.fields'):
-            key = key.replace('.fields', '')
-            # tag에서 찾기
-            if self.tag is not None:
-                for block in self.tag.in_blocks:
-                    if block.name == key:
-                        return block.fields
-                for block in self.tag.out_blocks:
-                    if block.name == key:
-                        return block.fields
-        return None
+        # if key.endswith('.res'):
+        #     return self.res
+        #     # key = key.replace('.res', '')
+        #     # # tag에서 찾기
+        #     # if self.tag is not None:
+        #     #     for block in self.tag.in_blocks:
+        #     #         if block.name == key:
+        #     #             return block.fields
+        #     #     for block in self.tag.out_blocks:
+        #     #         if block.name == key:
+        #     #             return block.fields
+        # return None

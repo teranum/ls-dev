@@ -33,7 +33,7 @@ async def sample(api: XingApi):
         print(f'요청실패: {api.last_message}')
         return
 
-    price = response['t1102OutBlock'][0]['price']
+    price = response['t1102OutBlock']['price']
     print(f'삼성전자 현재가: {price}')
 
 
@@ -88,13 +88,16 @@ if __name__ == "__main__":
         response = await api.request("t8410", inputs)
 
         # 성공시 ResponseData 리턴, 실패시 None 리턴 (실패사유는 last_message에 저장됨)
-        t1102OutBlock = response['t1102OutBlock'][0]                # t1102OutBlock 데이터 가져오기
+
+        # 블록타입이 배열이 아닌 경우 dict 로 반환됨, 배열(occurs)인 경우 list[dict] 로 반환됨)
+
+        t1102OutBlock = response['t1102OutBlock']                   # t1102OutBlock 데이터 가져오기
         print(t1102OutBlock['price'])                               # 삼성전자 현재가 출력
 
-        t8410OutBlock = response['t8410OutBlock'][0]                # t8410OutBlock 데이터 가져오기
+        t8410OutBlock = response['t8410OutBlock']                   # t8410OutBlock 데이터 가져오기
         print(t8410OutBlock['jisiga'], t8410OutBlock['jiclose'])    # 전일시가, 전일종가 출력
 
-        t8410OutBlock1 = response['t8410OutBlock1']                 # t8410OutBlock1 데이터 가져오기 (occurs)
+        t8410OutBlock1 = response['t8410OutBlock1']                 # t8410OutBlock1 데이터 가져오기 (occurs 경우 list[dict] 로 반환됨)
         for data in t8410OutBlock1:
             print(data['date'], data['close'])                      # 날짜, 종가 출력
 

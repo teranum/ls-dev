@@ -70,6 +70,7 @@ class ResInfo:
         self.is_func = False
         self.is_attr = False
         self.is_block = False
+        self.compressable = False
         self.headtype = str()
         self.in_blocks: list[BlockSpec] = []
         self.out_blocks: list[BlockSpec] = []
@@ -180,6 +181,9 @@ class ResInfo:
 
         if readState == ResInfo.RESFILE_READ_STATE.FOUNDED_END_FUNCTION_MAP:
             self.is_correct = True
+            if len(self.in_blocks) > 0:
+                comp_yn = next((x for x in self.in_blocks[0].fields if x.name == "comp_yn"), None)
+                self.compressable = comp_yn is not None
 
 class ResourceManager:
     def __init__(self, xing_folder = ""):
@@ -290,10 +294,16 @@ if __name__ == "__main__":
     infos = resManager._resources
 
     for key, value in infos.items():
-        # check in_blocks count
-        if len(value.in_blocks) > 1:
-            print(f"{value.tr_cd}: {value.tr_desc} in_blocks count = {len(value.in_blocks)}")
+        # # check in_blocks count
+        # if len(value.in_blocks) > 1:
+        #     print(f"{value.tr_cd}: {value.tr_desc} in_blocks count = {len(value.in_blocks)}")
 
-        #check headtype is not A
-        if value.headtype not in ["A", ""]:
-            print(f"{value.tr_cd}: {value.tr_desc} headtype = {value.headtype}")
+        # #check headtype is not A
+        # if value.headtype not in ["A", ""]:
+        #     print(f"{value.tr_cd}: {value.tr_desc} headtype = {value.headtype}")
+
+        # find field name is 'comp_yn'
+        for block in value.in_blocks:
+            for field in block.fields:
+                if field.name == "comp_yn":
+                    print(f"{value.tr_cd}: {value.tr_desc} comp_yn in {block.name}")
