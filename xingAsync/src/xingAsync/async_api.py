@@ -532,6 +532,14 @@ class XingApi:
 
         return response
 
+    def remove_service(self, tr_cd: str, data: str) -> bool:
+        ret = self._module.ETK_RemoveService(self._hwnd, tr_cd.encode(self.enc), data.encode(self.enc))
+        if ret < 0:
+            self.last_message = f"[{ret}] {self._get_error_message(ret)}"
+            return False
+        self.last_message = ""
+        return True
+
     def realtime(self, tr_cd:str, in_datas:str, advise: bool):
         """
         advise / unadvise realtime data to server
