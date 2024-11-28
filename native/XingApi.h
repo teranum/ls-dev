@@ -31,6 +31,7 @@ namespace xing
 
 	class XingApi : private IXingApi
 	{
+		typedef BOOL(__stdcall* FP_XING64_Init) (LPCTSTR);
 	private:
 		HWND m_hWnd;
 		AsyncMsgManager m_asyncManager;
@@ -47,10 +48,31 @@ namespace xing
 
 	public:
 		BOOL IsInit() const { return IXingApi::IsInit(); }
-		BOOL Init(HWND hWnd, LPCTSTR szPath)
+		BOOL Init(HWND hWnd, LPCTSTR szXingFolder)
 		{
 			m_hWnd = hWnd;
-			return IXingApi::Init(szPath);
+
+#ifdef _WIN64
+			bool is_loaded = IXingApi::Init("xingAPI64.dll");
+			if (!is_loaded)
+			{
+				last_message = "Already logined!";
+				return false;
+			}
+			FP_XING64_Init XING64_Init = (FP_XING64_Init)GetProcAddress(m_hModule, "XING64_Init");
+			if (!XING64_Init(szXingFolder))
+			{
+				last_message = "Failed to init xing64.!";
+				FreeLibrary(m_hModule);
+				m_hModule = NULL;
+				return false;
+			}
+#else
+			std::string szPath = szXingFolder;
+			szPath += "\\xingAPI.dll";
+			return IXingApi::Init(szPath.c_str());
+#endif
+			return true;
 		}
 		const auto& get_account_list() const { return account_list; };
 
@@ -74,8 +96,8 @@ namespace xing
 			bool is_simulation = crt_pwd == nullptr || strlen(crt_pwd) == 0;
 			auto ret = ETK_Connect(m_hWnd, is_simulation ? simul_domain : real_domain, serveer_port, WM_USER, -1, -1);
 			if (!ret) {
-				std::cerr << "Failed to connect!" << std::endl;
-				return 1;
+				last_message = "Failed to connect!";
+				return false;
 			}
 
 			ret = ETK_Login(m_hWnd, user_id, user_pwd, crt_pwd, server_type, show_crt_pwd);
@@ -125,7 +147,7 @@ namespace xing
 			return true;
 		}
 
-		ResponseData request(LPCSTR tr_cd, const std::string& indatas, BOOL bNext = false, LPCSTR next_key = nullptr, int nTimeOut = 0) {
+		ResponseData request(LPCSTR tr_cd, const std::string& indatas, BOOL bNext = false, LPCSTR next_key = "", int nTimeOut = 0) {
 			ResponseData response;
 			response.tr_cd = tr_cd;
 			response.indatas = indatas;
@@ -146,7 +168,7 @@ namespace xing
 
 			auto lambda = [&response](WPARAM wParam, LPARAM lParam) {
 				std::stringstream ss;
-				if (wParam == RF::REQUEST_DATA) {
+				if (wParam == REQUEST_DATA) {
 					auto recv_packet = (LPRECV_PACKET)lParam;
 					response.cont_yn = recv_packet->cCont[0] == '1';
 					response.cont_key = recv_packet->szContKey;
@@ -154,7 +176,7 @@ namespace xing
 					// recv_packet->lpData, recv_packet->nDataLength 파싱 (res파일 참조)
 					response.outdatas.push_back({ recv_packet->szBlockName, data });
 				}
-				else if (wParam == RF::MESSAGE_DATA || wParam == RF::SYSTEM_ERROR_DATA) {
+				else if (wParam == MESSAGE_DATA || wParam == SYSTEM_ERROR_DATA) {
 					LPMSG_PACKET msg_packet = (LPMSG_PACKET)lParam;
 					response.rsp_cd = msg_packet->szMsgCode;
 					response.rsp_msg = std::string((LPCSTR)msg_packet->lpszMessageData, msg_packet->nMsgLength);
@@ -176,7 +198,7 @@ namespace xing
 			auto xm = message - WM_USER;
 			std::cout << "XM=" << xm << ", wParam=" << wParam << ", lParam=" << lParam << std::endl;
 			switch (xm) {
-			case XM::XM_LOGIN:
+			case XM_LOGIN:
 			{
 				AsyncNode* node = m_asyncManager.GetNode(0);
 				if (node) {
@@ -186,13 +208,13 @@ namespace xing
 				}
 			}
 				break;
-			case XM::XM_RECEIVE_DATA:
+			case XM_RECEIVE_DATA:
 			{
 				switch (wParam)
 				{
-				case RF::REQUEST_DATA:
-				case RF::MESSAGE_DATA:
-				case RF::SYSTEM_ERROR_DATA:
+				case REQUEST_DATA:
+				case MESSAGE_DATA:
+				case SYSTEM_ERROR_DATA:
 				{
 					int nRqID = *((int*)lParam);
 					AsyncNode* node = m_asyncManager.GetNode(nRqID);
@@ -202,7 +224,7 @@ namespace xing
 					}
 				}
 					break;
-				case RF::RELEASE_DATA:
+				case RELEASE_DATA:
 				{
 					int nRqID = (int)lParam;
 					AsyncNode* node = m_asyncManager.GetNode(nRqID);

@@ -17,7 +17,7 @@ void xingapi_test(HWND hWnd)
 	// xingapi login, show accounts
 	//////////////////////////////////////////////
 
-    if (!api.Init(hWnd, "C:\\LS_SEC\\xingAPI\\xingAPI.dll"))
+    if (!api.Init(hWnd, "C:\\LS_SEC\\xingAPI"))
     {
         std::cerr << "Failed to load xingAPI.dll!" << std::endl;
         return;
@@ -73,6 +73,10 @@ int main()
 {
     std::cout << "Hello World!\n";
 
+	//LPCSTR file_path = "D:\\t8410OutBlock1.dat";
+ //   test(file_path);
+	//return 0;
+
     HINSTANCE hInstance = GetModuleHandle(NULL);
     WNDCLASS wc = { 0 };
     wc.lpfnWndProc = WndProc;
@@ -110,7 +114,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
     std::cout << "hWnd=" << hWnd << ", Message=" << message << ", wParam=" << wParam << ", lParam=" << lParam << std::endl;
 
 	auto xm = message - WM_USER;
-	if (xm > 0 && xm < xing::XM::XM_LAST)
+	if (xm > 0 && xm < xing::XM_LAST)
 	{
 		api.WndProc(hWnd, message, wParam, lParam);
     }

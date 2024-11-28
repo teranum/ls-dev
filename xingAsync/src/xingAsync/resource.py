@@ -30,16 +30,6 @@ class FieldSpec:
         if self.dot_size > 0:
             self.dot_value = pow(10, self.dot_size)
 
-    @staticmethod
-    def get_default_value(var_type: VarType):
-        match var_type:
-            case FieldSpec.VarType.INT:
-                return 0
-            case FieldSpec.VarType.FLOAT:
-                return 0.0
-            case FieldSpec.VarType.STRING:
-                return ""
-
 class BlockSpec:
     def __init__(self, name: str, is_output: bool, is_occurs: bool):
         self.name = name
@@ -156,7 +146,8 @@ class ResInfo:
                 else:
                     spec_fields = [x.strip() for x in line.split(';')[0].split(',')]
                     field_desc = spec_fields[0]
-                    field_name = spec_fields[1]
+                    # field_name = spec_fields[1] # not used
+                    field_name = spec_fields[2]
                     field_type = spec_fields[3]
                     field_size = float(spec_fields[4])
                     blockSpec.fields.append(FieldSpec(field_name, field_desc, field_type, field_size))
@@ -191,47 +182,6 @@ class ResourceManager:
         self._user_folder = os.path.dirname(os.path.abspath(__main__.__file__))
         self._xing_folder = xing_folder
         self._resources: dict[str, ResInfo] = {}
-
-        res_c0003 = ('''\
-            BEGIN_FUNCTION_MAP
-	            .Func,리소스,c0003,block,headtype=A;
-	            BEGIN_DATA_MAP
-	            c0003InBlock,input,input;
-	            begin
-		            경로,path,path,char,0;
-	            end
-	            c0003OutBlock,output,output;
-	            begin
-		            데이터,data,data,char,0;
-	            end
-	            END_DATA_MAP
-            END_FUNCTION_MAP
-            \
-        ''')
-        self.set_from_text(res_c0003)
-        res_UFR = ('''\
-            BEGIN_FUNCTION_MAP
-	            .Feed, 조건검색실시간(t1857OutBlock1), UFR, attr, key=6, group=1;
-	            BEGIN_DATA_MAP
-	            UFRInBlock,input,input;
-	            begin
-	            end
-	            UFROutBlock,output,output;
-	            begin
-		            종목코드, shcode, shcode, char, 7;
-		            종목명, hname, hname, char, 40;
-		            현재가, price, price, long, 9;
-		            전일대비구분, sign, sign, char, 1;
-		            전일대비, change, change, long, 9;
-		            등락율, diff, diff, float, 6;
-		            거래량, volume, volume, long, 12;
-		            종목상태(N:진입 R:재진입 O:이탈), JobFlag, JobFlag, char, 1;
-	            end
-	            END_DATA_MAP
-            END_FUNCTION_MAP
-            \
-        ''')
-        self.set_from_text(res_UFR)
 
     def set_from_text(self, text: str) :
         res_info = ResInfo()
@@ -302,8 +252,14 @@ if __name__ == "__main__":
         # if value.headtype not in ["A", ""]:
         #     print(f"{value.tr_cd}: {value.tr_desc} headtype = {value.headtype}")
 
-        # find field name is 'comp_yn'
-        for block in value.in_blocks:
-            for field in block.fields:
-                if field.name == "comp_yn":
-                    print(f"{value.tr_cd}: {value.tr_desc} comp_yn in {block.name}")
+        # # find field name is 'comp_yn'
+        # for block in value.in_blocks:
+        #     for field in block.fields:
+        #         if field.name == "comp_yn":
+        #             print(f"{value.tr_cd}: {value.tr_desc} comp_yn in {block.name}")
+
+        # find if filename != tr_cd
+        path = value.filepath
+        filename = os.path.basename(path)
+        if filename != value.tr_cd + ".res":
+            print(f"{key} != {filename}")

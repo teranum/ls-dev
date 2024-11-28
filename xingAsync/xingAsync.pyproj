@@ -11,7 +11,7 @@
     <OutputPath>.</OutputPath>
     <Name>xingAsync</Name>
     <RootNamespace>xingAsync</RootNamespace>
-    <InterpreterId>MSBuild|env32|$(MSBuildProjectFullPath)</InterpreterId>
+    <InterpreterId>MSBuild|env64|$(MSBuildProjectFullPath)</InterpreterId>
     <IsWindowsApplication>False</IsWindowsApplication>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
@@ -48,6 +48,15 @@
       <WindowsInterpreterPath>Scripts\pythonw.exe</WindowsInterpreterPath>
       <PathEnvironmentVariable>PYTHONPATH</PathEnvironmentVariable>
       <Architecture>X86</Architecture>
+    </Interpreter>
+    <Interpreter Include="env64\">
+      <Id>env64</Id>
+      <Version>3.12</Version>
+      <Description>env64 (Python 3.12 (64-bit))</Description>
+      <InterpreterPath>Scripts\python.exe</InterpreterPath>
+      <WindowsInterpreterPath>Scripts\pythonw.exe</WindowsInterpreterPath>
+      <PathEnvironmentVariable>PYTHONPATH</PathEnvironmentVariable>
+      <Architecture>X64</Architecture>
     </Interpreter>
   </ItemGroup>
   <ItemGroup>

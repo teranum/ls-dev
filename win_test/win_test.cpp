@@ -76,7 +76,7 @@ void Run(LPCSTR sample)
 INT_PTR CALLBACK DlgProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 {
     auto xm = message - WM_USER;
-    if (xm > 0 && xm < xing::XM::XM_LAST)
+    if (xm > 0 && xm < xing::XM_LAST)
     {
         api.WndProc(hDlg, message, wParam, lParam);
         return 0;
@@ -100,7 +100,7 @@ INT_PTR CALLBACK DlgProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 		}
 		SendMessage(hCombo, CB_SETCURSEL, 0, 0);
 
-		auto ret = api.Init(hDlg, "C:\\LS_SEC\\xingAPI\\xingAPI.dll");
+		auto ret = api.Init(hDlg, "C:\\LS_SEC\\xingAPI");
         if (ret) {
 			OutputLog("Loaded xingAPI.dll!");
 			EnableWindow(GetDlgItem(hDlg, IDC_BUTTON_LOGIN), TRUE);

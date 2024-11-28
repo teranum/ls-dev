@@ -31,11 +31,11 @@ namespace xing
 
 		typedef int(__stdcall* FP_ETK_Request) (HWND, LPCTSTR, LPCTSTR, int, BOOL, LPCTSTR, int);
 		typedef void(__stdcall* FP_ETK_ReleaseRequestData) (int);
-		typedef void(__stdcall* FP_RELEASEMESSAGEDATA) (LPARAM);
+		typedef void(__stdcall* FP_ETK_ReleaseMessageData) (LPARAM);
 
 		typedef BOOL(__stdcall* FP_ETK_AdviseRealData) (HWND, LPCTSTR, LPCTSTR, int);
 		typedef BOOL(__stdcall* FP_ETK_UnadviseRealData) (HWND, LPCTSTR, LPCTSTR, int);
-		typedef BOOL(__stdcall* FP_UNADVISEWINDOW) (HWND);
+		typedef BOOL(__stdcall* FP_ETK_UnadviseWindow) (HWND);
 
 		typedef int(__stdcall* FP_ETK_GetAccountListCount) ();
 		typedef BOOL(__stdcall* FP_ETK_GetAccountList) (int, LPSTR, int);
@@ -96,9 +96,9 @@ namespace xing
 		FP_ETK_Request					ETK_Request;
 		FP_ETK_AdviseRealData			ETK_AdviseRealData;
 		FP_ETK_UnadviseRealData			ETK_UnadviseRealData;
-		FP_UNADVISEWINDOW			m_fpUnadviseWindow;
+		FP_ETK_UnadviseWindow			ETK_UnadviseWindow;
 		FP_ETK_ReleaseRequestData		ETK_ReleaseRequestData;
-		FP_RELEASEMESSAGEDATA		m_fpReleaseMessageData;
+		FP_ETK_ReleaseMessageData		ETK_ReleaseMessageData;
 
 		FP_ETK_GetAccountListCount		ETK_GetAccountListCount;
 		FP_ETK_GetAccountList			ETK_GetAccountList;
@@ -172,9 +172,9 @@ namespace xing
 			ETK_Request = (FP_ETK_Request)GetProcAddress(m_hModule, "ETK_Request");
 			ETK_AdviseRealData = (FP_ETK_AdviseRealData)GetProcAddress(m_hModule, "ETK_AdviseRealData");
 			ETK_UnadviseRealData = (FP_ETK_UnadviseRealData)GetProcAddress(m_hModule, "ETK_UnadviseRealData");
-			m_fpUnadviseWindow = (FP_UNADVISEWINDOW)GetProcAddress(m_hModule, "ETK_UnadviseWindow");
+			ETK_UnadviseWindow = (FP_ETK_UnadviseWindow)GetProcAddress(m_hModule, "ETK_UnadviseWindow");
 			ETK_ReleaseRequestData = (FP_ETK_ReleaseRequestData)GetProcAddress(m_hModule, "ETK_ReleaseRequestData");
-			m_fpReleaseMessageData = (FP_RELEASEMESSAGEDATA)GetProcAddress(m_hModule, "ETK_ReleaseMessageData");
+			ETK_ReleaseMessageData = (FP_ETK_ReleaseMessageData)GetProcAddress(m_hModule, "ETK_ReleaseMessageData");
 
 			ETK_GetAccountListCount = (FP_ETK_GetAccountListCount)GetProcAddress(m_hModule, "ETK_GetAccountListCount");
 			ETK_GetAccountList = (FP_ETK_GetAccountList)GetProcAddress(m_hModule, "ETK_GetAccountList");
@@ -227,7 +227,7 @@ namespace xing
 	};
 
 	// XING API Message
-	enum XM
+	enum XING_MSG
 	{
 		/// <summary>
 		/// 서버와의 연결이 끊어졌을 경우 발생
@@ -279,7 +279,7 @@ namespace xing
 	};
 
 	// RECEIVE_DATA FLAG
-	enum RF
+	enum RECEIVE_DATA_FLAG
 	{
 		REQUEST_DATA = 1,
 		MESSAGE_DATA = 2,

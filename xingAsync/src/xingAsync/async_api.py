@@ -9,27 +9,39 @@ class XingApi:
     XM_MSG_BASE: int = 1024
     enc = 'euc-kr'
 
-    def __init__(self, xing_folder: str = "C:\\LS_SEC\\xingAPI"):
-        dll_path = os.path.join(xing_folder, "xingAPI.dll")
-
-        try:
-            self._module = ctypes.WinDLL(dll_path)
-        except:
-            self._module = None
-
-        if not self._module:
+    def __init__(self, xing_folder: str = ""):
+        """ XingApi class """
+        is_64bit = ctypes.sizeof(ctypes.c_void_p) == 8
+        if not os.path.exists(xing_folder):
             import winreg as wrg
             try:
-                regKey = wrg.OpenKeyEx(wrg.HKEY_CLASSES_ROOT, r"CLSID\\{7FEF321C-6BFD-413C-AA80-541A275434A1}\\InprocServer32")
+                if is_64bit:
+                    regKey = wrg.OpenKeyEx(wrg.HKEY_CLASSES_ROOT, r"WOW6432Node\\CLSID\\{7FEF321C-6BFD-413C-AA80-541A275434A1}\\InprocServer32")
+                else:
+                    regKey = wrg.OpenKeyEx(wrg.HKEY_CLASSES_ROOT, r"CLSID\\{7FEF321C-6BFD-413C-AA80-541A275434A1}\\InprocServer32")
                 def_value = wrg.QueryValueEx(regKey, None)
                 wrg.CloseKey(regKey)
                 if len(def_value[0]) > 0:
-                    registry_folder = os.path.dirname(def_value[0])
-                    dll_path = os.path.join(registry_folder, "xingAPI.dll")
-                    self._module = ctypes.WinDLL(dll_path)
-                    xing_folder = registry_folder
+                    xing_folder = os.path.dirname(def_value[0])
             except:
-                self._module = None
+                pass
+
+        try:
+            if is_64bit:
+                pack_dll_path = os.path.dirname(os.path.abspath(__file__)) + "\\native" + '\\xingAPI64.dll'
+                if os.path.exists(pack_dll_path):
+                    self._module = ctypes.WinDLL(pack_dll_path)
+                else:
+                    self._module = ctypes.WinDLL(os.path.join(xing_folder, "xingAPI64.dll"))
+                self._module.ETK_ReleaseRequestData.argtypes = [ctypes.c_int] # not used
+                self._module.ETK_ReleaseMessageData.argtypes = [ctypes.c_voidp] # not used
+                self._module.ETK_Decompress.argtypes = [ctypes.c_voidp, ctypes.c_voidp, ctypes.c_int] # for decompress
+                if not self._module.XING64_Init(xing_folder.encode()):
+                    self._module = None
+            else:
+                self._module = ctypes.WinDLL(os.path.join(xing_folder, "xingAPI.dll"))
+        except:
+            self._module = None
 
         self.xing_folder = xing_folder
 
@@ -414,14 +426,14 @@ class XingApi:
                                     rec_count = response.body.get(out_blocks[0].name)['rec_count']
                                     target_size = rec_count * out_block.record_size
                                     buffer = ctypes.create_string_buffer(target_size)
-                                    self._module.ETK_Decompress(lpData, buffer, nDataLength)
-                                    lpData = ctypes.cast(buffer, ctypes.c_void_p).value
-                                    nDataLength = target_size
+                                    new_pointer = ctypes.cast(buffer, ctypes.c_void_p).value
+                                    nDataLength = self._module.ETK_Decompress(lpData, new_pointer, nDataLength)
+                                    lpData = new_pointer
                             nFrameCount = nDataLength // out_block.record_size
                             rows, cols = (nFrameCount, len(out_block.fields))
                             datas = [None] * rows
                             for i in range(rows):
-                                row_datas = {}
+                                col_datas = {}
                                 for j in range(cols):
                                     field = out_block.fields[j]
                                     size = field.size
@@ -444,12 +456,12 @@ class XingApi:
                                             cell_data = text_data
                                     except:
                                         cell_data = text_data
-                                    row_datas[field.name] = cell_data
+                                    col_datas[field.name] = cell_data
                                     if res_info.is_attr:
                                         size += 1
                                     lpData += size
 
-                                datas[i] = row_datas
+                                datas[i] = col_datas
 
                             if out_block.is_occurs:
                                 response.body[out_block.name] = datas
@@ -474,7 +486,7 @@ class XingApi:
                             # errMsg = "수신 데이터 길이 오류."
                             break
                         for i in range(rows):
-                            row_datas = {}
+                            col_datas = {}
                             for j in range(cols):
                                 field = out_block.fields[j]
                                 size = field.size
@@ -497,12 +509,12 @@ class XingApi:
                                         cell_data = text_data
                                 except:
                                     cell_data = text_data
-                                row_datas[field.name] = cell_data
+                                col_datas[field.name] = cell_data
                                 if res_info.is_attr:
                                     size += 1
                                 lpData += size
                                 nDataLength -= size
-                            datas[i] = row_datas
+                            datas[i] = col_datas
 
                         if out_block.is_occurs:
                             response.body[out_block.name] = datas
@@ -626,6 +638,8 @@ class XingApi:
                                 node.callback(wparam, lparam)
                                 node.set()
                             self._module.ETK_ReleaseMessageData(lparam)
+                            if wparam == RECV_FLAG.SYSTEM_ERROR_DATA:
+                                self._module.ETK_ReleaseRequestData(hash_id)
 
                         case RECV_FLAG.RELEASE_DATA:
                             hash_id = int(lparam)
@@ -652,8 +666,10 @@ class XingApi:
                     pszData = unpack_result.pszData
 
                     if xM == XING_MSG.XM_RECEIVE_REAL_DATA_SEARCH:
+                        szTrCode = "t1857"
                         real_cd = "t1857"
                     elif xM == XING_MSG.XM_RECEIVE_REAL_DATA_CHART:
+                        szTrCode = f"ChartIndex-{wparam}"
                         real_cd = "ChartIndex"
                     else:
                         real_cd = szTrCode
@@ -667,31 +683,34 @@ class XingApi:
 
                         if nDataLength >= out_block.record_size:
                             field_count = len(out_block.fields)
-                            row_datas = {}
+                            col_datas = {}
                             for i in range(field_count):
                                 field = out_block.fields[i]
                                 size = field.size
                                 text_data = ctypes.string_at(pszData, size).decode(self.enc, errors="ignore").strip()
                                 text_len = len(text_data)
-                                if field.var_type == FieldSpec.VarType.INT:
-                                    if text_len == 0:
-                                        cell_data = 0
+                                try:
+                                    if field.var_type == FieldSpec.VarType.INT:
+                                        if text_len == 0:
+                                            cell_data = 0
+                                        else:
+                                            cell_data = int(text_data)
+                                    elif field.var_type == FieldSpec.VarType.FLOAT:
+                                        if text_len == 0:
+                                            cell_data = 0.0
+                                        else:
+                                            cell_data = float(text_data)
+                                            if field.dot_value > 0 and '.' not in text_data:
+                                                cell_data /= field.dot_value
                                     else:
-                                        cell_data = int(text_data)
-                                elif field.var_type == FieldSpec.VarType.FLOAT:
-                                    if text_len == 0:
-                                        cell_data = 0.0
-                                    else:
-                                        cell_data = float(text_data)
-                                        if field.dot_value > 0 and '.' not in text_data:
-                                            cell_data /= field.dot_value
-                                else:
+                                        cell_data = text_data
+                                except:
                                     cell_data = text_data
-                                row_datas[field.name] = cell_data
+                                col_datas[field.name] = cell_data
                                 if res_info.is_attr:
                                     size += 1
                                 pszData += size
-                            self.on_realtime.emit_signal(szTrCode, szKeyData, row_datas)
+                            self.on_realtime.emit_signal(szTrCode, szKeyData, col_datas)
                     # else:
                     #     bytes_data = ctypes.cast(pszData, ctypes.POINTER(ctypes.c_byte * nDataLength)).contents
                     #     self.on_realtime.emit_signal(szTrCode, szKeyData, list(bytes_data))

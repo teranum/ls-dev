@@ -1,4 +1,4 @@
-﻿# [개발중...] xingAsync Package
+﻿# xingAsync Package
 
 This is a simple package for aysnc XingApi (dll mode).
 
