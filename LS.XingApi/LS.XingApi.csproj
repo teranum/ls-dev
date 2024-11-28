@@ -4,6 +4,7 @@
 		<TargetFramework>net8.0-windows</TargetFramework>
 		<ImplicitUsings>enable</ImplicitUsings>
 		<Nullable>enable</Nullable>
+		<UseWindowsForms>true</UseWindowsForms>
 		<Description>NET wrapper for LS XingApi</Description>
 		<Version>0.0.3-pre1</Version>
 		<Title>LS.XingApi</Title>
