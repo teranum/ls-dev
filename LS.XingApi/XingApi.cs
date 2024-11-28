@@ -9,8 +9,9 @@ namespace LS.XingApi
     public partial class XingApi
     {
         [DllImport("kernel32.dll")] private static extern IntPtr LoadLibrary(string dllToLoad);
-        // GetProcAddress
         [DllImport("kernel32.dll")] private static extern IntPtr GetProcAddress(IntPtr hModule, string procedureName);
+        private const string XING_DLL = "xingAPI.dll";
+        private const string XING64_DLL = "xingAPI64.dll";
         private delegate bool XING64_Init_Handler(string szFolder);
         class WndForm : Form
         {
@@ -203,11 +204,11 @@ namespace LS.XingApi
             var exe_folder = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location)!;
             if (is_64bit)
             {
-                var pack_dll_path = Path.Combine(exe_folder, "XingAPI64.dll");
+                var pack_dll_path = Path.Combine(exe_folder, XING64_DLL);
                 if (File.Exists(pack_dll_path))
                     handle = LoadLibrary(pack_dll_path);
                 else
-                    handle = LoadLibrary(Path.Combine(apiFolder, "xingAPI64.dll"));
+                    handle = LoadLibrary(Path.Combine(apiFolder, XING64_DLL));
 
                 if (handle != 0)
                 {
@@ -223,7 +224,7 @@ namespace LS.XingApi
                 }
             }
             else
-                handle = LoadLibrary(Path.Combine(apiFolder, "xingAPI.dll"));
+                handle = LoadLibrary(Path.Combine(apiFolder, XING_DLL));
 
             _resManager = new ResManager(exe_folder, apiFolder);
 

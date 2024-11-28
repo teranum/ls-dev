@@ -12,15 +12,8 @@ namespace LS.XingApi.Native
     /// </summary>
     internal class IXingApi
     {
-        private const string XING_DLL = "XingAPI.dll";
-        private const string XING64_DLL = "XingAPI64.dll";
-        [DllImport("kernel32.dll")] private static extern IntPtr LoadLibrary(string dllToLoad);
-
-        // GetProcAddress
         [DllImport("kernel32.dll")] private static extern IntPtr GetProcAddress(IntPtr hModule, string procedureName);
 
-        // FreeLibrary
-        [DllImport("kernel32.dll")] private static extern bool FreeLibrary(IntPtr hModule);
 
         private nint _moduleHandle;
         /// <summary>
