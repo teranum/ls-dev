@@ -1,0 +1,20 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<TargetFramework>net8.0-windows</TargetFramework>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+		<Description>NET wrapper for LS XingApi</Description>
+		<Version>0.0.3-pre1</Version>
+		<Title>LS.XingApi</Title>
+		<PackageTags>LS, eBEST, XingApi</PackageTags>
+		<Authors>teranum</Authors>
+		<Copyright>Copyright © teranum 2024</Copyright>
+		<PackageIcon>icon.png</PackageIcon>
+		<Company>$(Authors)</Company>
+		<PackageLicenseExpression>MIT</PackageLicenseExpression>
+		<GenerateDocumentationFile>true</GenerateDocumentationFile>
+		<NoWarn>$(NoWarn);IDE0130</NoWarn>
+	</PropertyGroup>
+
+</Project>
