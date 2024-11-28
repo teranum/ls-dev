@@ -22,7 +22,7 @@ namespace LS.XingApi.Native
         // FreeLibrary
         [DllImport("kernel32.dll")] private static extern bool FreeLibrary(IntPtr hModule);
 
-        private IntPtr _moduleHandle;
+        private nint _moduleHandle;
         /// <summary>
         /// Returns true if the DLL is loaded.
         /// </summary>
@@ -30,10 +30,10 @@ namespace LS.XingApi.Native
         /// <summary>
         /// XingAPI.dll의 Native 함수를 호출하기 위한 클래스
         /// </summary>
-        /// <param name="dll_path"></param>
-        public IXingApi(string dll_path = "")
+        /// <param name="handle">dll handle</param>
+        public IXingApi(nint handle)
         {
-            _moduleHandle = LoadLibrary(dll_path);
+            _moduleHandle = handle;
             if (_moduleHandle != 0)
             {
                 _ETK_Connect = GetDelegateFromFuncName<ETK_Connect_Handler>();

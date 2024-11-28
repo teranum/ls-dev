@@ -1,6 +1,7 @@
 ﻿using LS.XingApi.Native;
+using Microsoft.Win32;
+using System.Reflection;
 using System.Runtime.InteropServices;
-using System.Text;
 
 namespace LS.XingApi
 {
@@ -8,6 +9,9 @@ namespace LS.XingApi
     public partial class XingApi
     {
         [DllImport("kernel32.dll")] private static extern IntPtr LoadLibrary(string dllToLoad);
+        // GetProcAddress
+        [DllImport("kernel32.dll")] private static extern IntPtr GetProcAddress(IntPtr hModule, string procedureName);
+        private delegate bool XING64_Init_Handler(string szFolder);
         class WndForm : Form
         {
             public Action<IntPtr, uint, IntPtr, IntPtr>? WndProcHandler;
@@ -84,12 +88,12 @@ namespace LS.XingApi
             public readonly string sLinkData;
             public readonly string sFiller;
         }
-        class RecvDataMemory
-        {
-            public string TrCode = "";
-            public int RequestID = 0;
-            public IList<BlockData> BlockTextDatas = [];
-        }
+        //class RecvDataMemory
+        //{
+        //    public string TrCode = "";
+        //    public int RequestID = 0;
+        //    public IList<BlockData> BlockTextDatas = [];
+        //}
         class AsyncNode(object[] objs)
         {
             public readonly int _ident_id = GetIdentId(objs);
@@ -130,7 +134,7 @@ namespace LS.XingApi
 
         readonly List<AsyncNode> _async_list = [];
 
-        private Form? _win32Window;
+        private Form _win32Window;
         private const int WM_USER = 0x0400;
         private const int AsyncTimeOut = 10000;
 
@@ -145,9 +149,14 @@ namespace LS.XingApi
         public event EventHandler<RealtimeEventArgs>? OnRealtimeEvent;
 
         /// <summary>
+        /// XingAPI 폴더
+        /// </summary>
+        public string XingFolder => _xing_folder;
+
+        /// <summary>
         /// 모듈이 로딩 된 경우 true
         /// </summary>
-        public bool ModuleLoaded => _dll.IsLoaded;
+        public bool ModuleLoaded => _module.IsLoaded;
 
         /// <summary>모의투자 여부</summary>
         public bool IsSimulation { get; private set; }
@@ -156,7 +165,7 @@ namespace LS.XingApi
         public bool Connected { get; private set; }
 
         /// <summary>윈도우 핸들</summary>
-        public nint Handle => _win32Window?.Handle ?? IntPtr.Zero;
+        public nint Handle => _win32Window.Handle;
 
         /// <summary>로그인 아이디</summary>
         public string UserID { get; private set; } = string.Empty;
@@ -166,85 +175,71 @@ namespace LS.XingApi
         /// </summary>
         public string LastErrorMessage { get; private set; } = string.Empty;
 
-        private IXingApi _dll;
+        private ResManager _resManager;
+        private IXingApi _module;
+        private string _xing_folder;
+        private bool _server_connected;
+        private bool _user_logined;
         /// <summary>API객체 생성</summary>
         public XingApi(string apiFolder = "")
         {
-            _dll = new IXingApi(apiFolder);
-            //_moduleHandle = _dll._moduleHandle;
-            //if (!string.IsNullOrEmpty(apiFolder) && Directory.Exists(apiFolder))
-            //{
-            //    var curDir = Environment.CurrentDirectory;
-            //    Environment.CurrentDirectory = apiFolder;
-            //    _moduleHandle = LoadLibrary(XingNative.XING_DLL);
-            //    Environment.CurrentDirectory = curDir;
-            //}
-            //else
-            //{
-            //    _moduleHandle = LoadLibrary(XingNative.XING_DLL);
+            bool is_64bit = Environment.Is64BitProcess;
+            if (!Directory.Exists(apiFolder))
+            {
+                var regKey = is_64bit
+                    ? Registry.ClassesRoot.OpenSubKey("WOW6432Node\\CLSID\\{7FEF321C-6BFD-413C-AA80-541A275434A1}\\InprocServer32")
+                    : Registry.ClassesRoot.OpenSubKey("CLSID\\{7FEF321C-6BFD-413C-AA80-541A275434A1}\\InprocServer32");
+                if (regKey is not null)
+                {
+                    if (regKey.GetValue("") is string defaultValue)
+                    {
+                        apiFolder = Path.GetDirectoryName(defaultValue) ?? string.Empty;
+                    }
+                    regKey.Close();
+                }
+            }
 
-            //    if (_moduleHandle == IntPtr.Zero)
-            //    {
-            //        // com ProgID로 경로 찾기
-            //        string progId = "XA_Session.XASession";
-            //        string? com_path = GetOcxDirectoryFromProgID(progId);
-            //        if (com_path is not null)
-            //        {
-            //            string? com_folder = Path.GetDirectoryName(com_path);
-            //            if (com_folder is not null && Directory.Exists(com_folder))
-            //            {
-            //                var curDir = Environment.CurrentDirectory;
-            //                Environment.CurrentDirectory = com_folder;
-            //                _moduleHandle = LoadLibrary(Path.Combine(com_folder, "XingAPI.dll"));
-            //                Environment.CurrentDirectory = curDir;
-            //            }
-            //        }
+            nint handle;
+            var exe_folder = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location)!;
+            if (is_64bit)
+            {
+                var pack_dll_path = Path.Combine(exe_folder, "XingAPI64.dll");
+                if (File.Exists(pack_dll_path))
+                    handle = LoadLibrary(pack_dll_path);
+                else
+                    handle = LoadLibrary(Path.Combine(apiFolder, "xingAPI64.dll"));
 
-            //        if (_moduleHandle == IntPtr.Zero)
-            //            LastErrorMessage = "모듈 로드 실패";
-            //    }
-            //}
+                if (handle != 0)
+                {
+                    var XING64_Init_Handle = GetProcAddress(handle, "XING64_Init");
+                    if (XING64_Init_Handle != IntPtr.Zero)
+                    {
+                        var XING64_Init = Marshal.GetDelegateForFunctionPointer<XING64_Init_Handler>(XING64_Init_Handle);
+                        if (!XING64_Init(apiFolder))
+                        {
+                            handle = 0;
+                        }
+                    }
+                }
+            }
+            else
+                handle = LoadLibrary(Path.Combine(apiFolder, "xingAPI.dll"));
 
-            //if (_moduleHandle != IntPtr.Zero)
-            //{
+            _resManager = new ResManager(exe_folder, apiFolder);
 
-            //}
+            _module = new IXingApi(handle);
+            _xing_folder = apiFolder;
 
-            //static string? GetClassIDFromProgID(string progID)
-            //{
-            //    var regPath = progID + @"\CLSID\";
-            //    return GetDefaultRegistryValue(Registry.ClassesRoot, regPath);
-            //}
-            //static string? GetOcxDirectoryFromProgID(string progID)
-            //{
-            //    if (GetClassIDFromProgID(progID) is string classID)
-            //        return GetOcxPathFromClassID(classID);
-            //    return default;
-            //}
-            //static string? GetOcxPathFromClassID(string clsID)
-            //{
-            //    var regPath = @"\CLSID\" + clsID + @"\InProcServer32\";
-            //    return GetDefaultRegistryValue(Registry.ClassesRoot, regPath);
-            //}
-            //static string? GetDefaultRegistryValue(RegistryKey rootKey, string regPath)
-            //{
-            //    try
-            //    {
-            //        using var regKey = rootKey.OpenSubKey(regPath);
-            //        if (regKey != null)
-            //        {
-            //            if (regKey.GetValue("") is string defaultValue)
-            //            {
-            //                return defaultValue;
-            //            }
-            //        }
-            //    }
-            //    catch
-            //    {
-            //        //log error
-            //    }
-            //    return null;
-            //}
+            // 새로운 창을 생성
+            _win32Window = new WndForm()
+            {
+                FormBorderStyle = FormBorderStyle.FixedToolWindow,
+                ShowInTaskbar = false,
+                StartPosition = FormStartPosition.Manual,
+                Location = new Point(-2000, -2000),
+                Size = new Size(1, 1),
+                WndProcHandler = WndProc,
+            };
         }
 
         /// <summary>
@@ -310,17 +305,6 @@ namespace LS.XingApi
                 return (nErrCode, GetErrorMessage(nErrCode));
             }
 
-            // 새로운 창을 생성
-            _win32Window = new WndForm()
-            {
-                FormBorderStyle = FormBorderStyle.FixedToolWindow,
-                ShowInTaskbar = false,
-                StartPosition = FormStartPosition.Manual,
-                Location = new Point(-2000, -2000),
-                Size = new Size(1, 1),
-                WndProcHandler = WndProc,
-            };
-
             IsSimulation = certPassword.Length == 0;
 
             // 먼저 연결 진행
@@ -381,28 +365,26 @@ namespace LS.XingApi
 
             var saveLoginMessage = newAsync._async_msg;
 
-            await ResManager.InitResourceAsnc(this);
-
             if (LastErrorMessage.Length == 0)
                 LastErrorMessage = saveLoginMessage;
             return (0, LastErrorMessage);
         }
 
         /// <summary>연결 해제</summary>
-        public bool Close()
+        public void Close()
         {
-            if (_win32Window != null)
+            if (!ModuleLoaded)
+                return;
+            if (_user_logined)
             {
-                if (Connected)
-                {
-                    IXingApi.ETK_Logout(Handle);
-                }
-                _win32Window.Close();
-                _win32Window = null;
+                IXingApi.ETK_Logout(Handle);
+                _user_logined = false;
             }
-
-            Connected = false;
-            return IXingApi.ETK_Disconnect();
+            if (_server_connected)
+            {
+                IXingApi.ETK_Disconnect();
+                _server_connected = false;
+            }
         }
 
 
@@ -569,30 +551,30 @@ namespace LS.XingApi
                         var real_recv_packet = Marshal.PtrToStructure<REAL_RECV_PACKET>(lParam);
                         string szTrCode = ByteToString(real_recv_packet.szTrCode).Trim();
                         string szKey = ByteToString(real_recv_packet.szKeyData).Trim();
-                        var trInfo = ResManager.GetResInfo(szTrCode);
-                        if (trInfo is not null && trInfo.ResSpec is not null)
-                        {
-                            var specOutBlock = trInfo.ResSpec.OutBlocks[0];
-                            byte[] bytes = new byte[real_recv_packet.nDataLength];
-                            Marshal.Copy(real_recv_packet.pszData, bytes, 0, real_recv_packet.nDataLength);
-                            var fileds = trInfo.ResSpec.OutBlocks;
-                            IntPtr nBufferAdr = real_recv_packet.pszData;
-                            int nFrameSize = specOutBlock.Fields.Sum(x => (int)x.size);
-                            if (trInfo.ResSpec.is_attr) nFrameSize += specOutBlock.Fields.Count;
-                            string[] realTextDatas = new string[specOutBlock.Fields.Count];
-                            for (int j = 0; j < specOutBlock.Fields.Count; j++)
-                            {
-                                int size = (int)specOutBlock.Fields[j].size;
-                                realTextDatas[j] = PtrToStringAnsi(nBufferAdr, size);
-                                if (trInfo.ResSpec.is_attr) size += 1;
-                                nBufferAdr += size;
-                            }
-                            OnRealtimeEvent?.Invoke(this, new(szTrCode, szKey, realTextDatas));
-                        }
-                        else
-                        {
-                            OnRealtimeEvent?.Invoke(this, new(szTrCode, szKey, [PtrToStringAnsi(real_recv_packet.pszData)!]));
-                        }
+                        var trInfo = _resManager.GetResInfo(szTrCode);
+                        //if (trInfo is not null && trInfo.ResSpec is not null)
+                        //{
+                        //    var specOutBlock = trInfo.ResSpec.OutBlocks[0];
+                        //    byte[] bytes = new byte[real_recv_packet.nDataLength];
+                        //    Marshal.Copy(real_recv_packet.pszData, bytes, 0, real_recv_packet.nDataLength);
+                        //    var fileds = trInfo.ResSpec.OutBlocks;
+                        //    IntPtr nBufferAdr = real_recv_packet.pszData;
+                        //    int nFrameSize = specOutBlock.Fields.Sum(x => (int)x.size);
+                        //    if (trInfo.ResSpec.is_attr) nFrameSize += specOutBlock.Fields.Count;
+                        //    string[] realTextDatas = new string[specOutBlock.Fields.Count];
+                        //    for (int j = 0; j < specOutBlock.Fields.Count; j++)
+                        //    {
+                        //        int size = (int)specOutBlock.Fields[j].size;
+                        //        realTextDatas[j] = PtrToStringAnsi(nBufferAdr, size);
+                        //        if (trInfo.ResSpec.is_attr) size += 1;
+                        //        nBufferAdr += size;
+                        //    }
+                        //    OnRealtimeEvent?.Invoke(this, new(szTrCode, szKey, realTextDatas));
+                        //}
+                        //else
+                        //{
+                        //    OnRealtimeEvent?.Invoke(this, new(szTrCode, szKey, [PtrToStringAnsi(real_recv_packet.pszData)!]));
+                        //}
                     }
                     break;
                 default:
@@ -648,10 +630,10 @@ namespace LS.XingApi
             {
                 tr_cd = tr_cd,
             };
-
+            /*
             int nRet = -905; // 자원정보가 없습니다.
 
-            var resInfo = await ResManager.GetResInfoAsync(tr_cd);
+            var resInfo = _resManager.GetResInfo(tr_cd);
             if (resInfo == null)
             {
                 response.rsp_msg = "TR 정보를 찾을 수 없습니다.";
@@ -922,6 +904,7 @@ namespace LS.XingApi
             nRet = -904;
         EndError:
             response.nRet = nRet;
+
             if (string.IsNullOrEmpty(response.rsp_msg))
             {
                 response.rsp_msg = GetErrorMessage(nRet);
@@ -930,6 +913,7 @@ namespace LS.XingApi
             {
                 response.rsp_cd = nRet.ToString();
             }
+            */
             return response;
         }
 
@@ -940,9 +924,9 @@ namespace LS.XingApi
         /// <param name="tr_key">단축코드 6자리 또는 8자리 (단건, 연속)</param>
         /// <param name="bAdd">시세등록: true, 시세해제: false</param>
         /// <returns>true: 요청성공, false: 요청실패</returns>
-        public async Task<bool> RequestRealtimeAsync(string tr_cd, string tr_key, bool bAdd)
+        public bool RequestRealtimeAsync(string tr_cd, string tr_key, bool bAdd)
         {
-            var resInfo = await ResManager.GetResInfoAsync(tr_cd);
+            var resInfo = _resManager.GetResInfo(tr_cd);
             if (resInfo == null)
             {
                 LastErrorMessage = "TR 정보를 찾을 수 없습니다.";
