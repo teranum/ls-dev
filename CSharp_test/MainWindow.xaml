@@ -64,6 +64,11 @@
                 Margin="20,0"
                 Command="{Binding ClearCommand}"
                 Content="지우기" />
+            <CheckBox
+                Margin="20,0"
+                VerticalAlignment="Center"
+                Content="요청전 지우기"
+                IsChecked="{Binding IsCheckClear}" />
         </StackPanel>
         <TextBox
             Grid.Row="2"

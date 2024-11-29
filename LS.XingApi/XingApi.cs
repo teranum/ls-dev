@@ -1,6 +1,7 @@
 ﻿using LS.XingApi.Native;
 using Microsoft.Win32;
 using System.Collections;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Reflection;
 using System.Runtime.InteropServices;
@@ -193,8 +194,7 @@ namespace LS.XingApi
                 default:
                     break;
             }
-            GetErrorMessage(nErrCode);
-            return GetErrorMessage(nErrCode);
+            return _module.GetErrorMessage(nErrCode);
         }
 
         /// <summary>
@@ -411,6 +411,8 @@ namespace LS.XingApi
                     }
                     if (field.type == FieldSpec.VarType.INT || field.type == FieldSpec.VarType.LONG)
                     {
+                        if (in_str.Length == 0)
+                            in_str = "0";
                         if (long.TryParse(in_str, out long int_val))
                         {
                             var conv_str = int_val.ToString();
@@ -422,6 +424,8 @@ namespace LS.XingApi
                     }
                     if (field.type == FieldSpec.VarType.DOUBLE)
                     {
+                        if (in_str.Length == 0)
+                            in_str = "0";
                         if (double.TryParse(in_str, out double float_val))
                         {
                             var conv_str = is_heade_B
@@ -648,12 +652,12 @@ namespace LS.XingApi
                                         if (res_info.compressable
                                             && out_block.is_occurs
                                             && response.body.TryGetValue(res_info.in_blocks[0].name, out var in_block_base)
-                                            && in_block_base is IDictionary<string, object> dict
-                                            && dict.TryGetValue("comp_yn", out var comp_yn)
-                                            && comp_yn.ToString()!.Equals("Y")
+                                            && in_block_base is IDictionary dict
+                                            && dict.Contains("comp_yn")
                                             )
                                         {
-                                            if (int.TryParse(((IDictionary)response.body[res_info.out_blocks[0].name])["rec_count"]!.ToString(), out var rec_count))
+                                            var comp_yn = dict["comp_yn"];
+                                            if (string.Equals(comp_yn, "Y") && int.TryParse(((IDictionary)response.body[res_info.out_blocks[0].name])["rec_count"]!.ToString(), out var rec_count))
                                             {
                                                 var target_size = rec_count * out_block.record_size;
                                                 var buffer = new byte[target_size];
@@ -697,6 +701,8 @@ namespace LS.XingApi
                             {
                                 foreach (var out_block in res_info.out_blocks)
                                 {
+                                    if (nDataLength <= 0)
+                                        break;
                                     var nFrameCount = 0;
                                     if (out_block.is_occurs)
                                     {

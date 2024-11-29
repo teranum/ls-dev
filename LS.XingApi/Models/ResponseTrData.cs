@@ -27,7 +27,7 @@
         /// <summary>resource info</summary>
         public ResInfo res = null!;
 
-        /// <summary>resource info</summary>
+        /// <summary>elapsed ticks for local/server (100ns)</summary>
         public List<long> ticks = [];
     }
 }
