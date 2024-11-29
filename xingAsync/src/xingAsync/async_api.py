@@ -114,14 +114,6 @@ class XingApi:
             self._module.ETK_Disconnect()
             self._server_connected = False
 
-    def get_res_info(self, tr_cd: str):
-        """ get resource information by tr_cd """
-        return self._res_manager.get(tr_cd)
-
-    def set_res_info(self, full_path: str):
-        """ set resource information from file """
-        return self._res_manager.set_from_filepath(full_path)
-
     def get_requests_count(self, tr_cd: str):
         """
         TR의 초당 전송 가능 횟수, Base 시간(초단위), TR의 10분당 제한 건수, 10분내 요청한 해당 TR의 총 횟수를 반환합니다.
@@ -200,7 +192,7 @@ class XingApi:
             self.last_message = "Not logined"
             return None
 
-        res_info = self.get_res_info(tr_cd)
+        res_info = self._res_manager.get(tr_cd)
         if res_info is None:
             self.last_message = "자원 정보를 찾을 수 없습니다."
             return None
@@ -549,12 +541,12 @@ class XingApi:
 
         if not advise and len(tr_cd) == 0 :
             if self._module.ETK_UnadviseWindow(self._hwnd):
-                self.last_message = ""
+                self.last_message = "모든 실시간 해제 성공."
                 return True
             self.last_message = "모든 실시간 해제 실패."
             return False
 
-        res_info = self.get_res_info(tr_cd)
+        res_info = self._res_manager.get(tr_cd)
         if res_info is None:
             self.last_message = "자원 정보를 찾을 수 없습니다."
             return False
@@ -684,7 +676,7 @@ class XingApi:
                     else:
                         real_cd = szTrCode
 
-                    res_info = self.get_res_info(real_cd)
+                    res_info = self._res_manager.get(real_cd)
                     if res_info:
                         if xM in [XING_MSG.XM_RECEIVE_REAL_DATA_SEARCH, xM == XING_MSG.XM_RECEIVE_REAL_DATA_CHART]:
                             out_block = res_info.out_blocks[1]
@@ -731,7 +723,17 @@ class XingApi:
             return 0
 
         return win32gui.DefWindowProc(hwnd, wm_msg, wparam, lparam)
-    
+
+    def set_mode(self, mode: str, value:str):
+        """
+        set mode
+        """
+        if not self._module:
+            self.last_message = "XingAPI.dll is not loaded"
+            return False
+        self._module.ETK_SetMode(mode.encode(self.enc), value.encode(self.enc))
+        return True
+
     class _xingSignal:
         def __init__(self):
             self.__slots = []
