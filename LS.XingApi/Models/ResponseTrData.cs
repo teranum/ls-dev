@@ -25,7 +25,7 @@
         public IDictionary<string, object> body = null!;
 
         /// <summary>resource info</summary>
-        public object res = null!;
+        public ResInfo res = null!;
 
         /// <summary>resource info</summary>
         public IList<long> ticks = [];

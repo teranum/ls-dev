@@ -1,23 +1,37 @@
 ﻿namespace LS.XingApi
 {
-    internal class FieldSpec
+    /// <summary>필드 데이터</summary>
+    public class FieldSpec
     {
+        /// <summary>필드타입</summary>
         public enum VarType
         {
+            /// <summary>문자열</summary>
             STRING,
+            /// <summary>정수(int)</summary>
             INT,
+            /// <summary>정수(long)</summary>
             LONG,
+            /// <summary>실수</summary>
             DOUBLE,
         }
 
+        /// <summary>필드명</summary>
         public string name;
+        /// <summary>필드설명</summary>
         public string desc;
+        /// <summary>필드내용</summary>
         public string? content;
+        /// <summary>필드타입</summary>
         public VarType type;
+        /// <summary>필드길이</summary>
         public int size;
+        /// <summary>소수점길이</summary>
         public int dot_size;
+        /// <summary>소수점값</summary>
         public double dot_value;
 
+        /// <summary>생성자</summary>
         public FieldSpec(string name, string desc, string type, double size)
         {
             this.name = name;
@@ -47,14 +61,21 @@
         }
     }
 
-    internal class BlockSpec
+    /// <summary>블록 데이터</summary>
+    public class BlockSpec
     {
+        /// <summary>블록명</summary>
         public string name;
+        /// <summary>출력여부</summary>
         public bool is_output;
+        /// <summary>반복여부</summary>
         public bool is_occurs;
+        /// <summary>필드 목록</summary>
         public IList<FieldSpec> fields = [];
+        /// <summary>레코드 크기</summary>
         public int record_size;
 
+        /// <summary>생성자</summary>
         public BlockSpec(string name, bool isOutput, bool isOccurs)
         {
             this.name = name;
@@ -63,7 +84,8 @@
         }
     }
 
-    internal class ResInfo
+    /// <summary>리소스 정보</summary>
+    public class ResInfo
     {
         enum RESFILE_READ_STATE
         {
@@ -77,22 +99,34 @@
             FOUNDED_END_DATA_MAP,
             FOUNDED_END_FUNCTION_MAP,
         }
+        /// <summary>파일경로</summary>
         public string filepath;
+        /// <summary>리소스 텍스트</summary>
         public string res_text;
+        /// <summary>정상여부</summary>
         public bool is_correct;
 
+        /// <summary>TR 코드</summary>
         public string tr_cd;
+        /// <summary>TR 설명</summary>
         public string tr_desc;
+        /// <summary>함수여부</summary>
         public bool is_func;
+        /// <summary>속성여부</summary>
         public bool is_attr;
+        /// <summary>블록여부</summary>
         public bool is_block;
+        /// <summary>압축가능여부</summary>
         public bool compressable;
-
+        /// <summary>헤드타입</summary>
         public string headtype;
 
+        /// <summary>입력 블록 목록</summary>
         public IList<BlockSpec> in_blocks = [];
+        /// <summary>출력 블록 목록</summary>
         public IList<BlockSpec> out_blocks = [];
 
+        /// <summary>생성자</summary>
         public ResInfo(string filePath = "")
         {
             filepath = filePath;
@@ -119,7 +153,8 @@
             }
         }
 
-        public void FromText(string text)
+        /// <summary>텍스트에서 리소스 정보를 설정합니다.</summary>
+        internal void FromText(string text)
         {
             res_text = text;
             is_correct = false;
@@ -303,18 +338,21 @@
         }
     }
 
-    internal class ResManager
+    /// <summary>리소스 매니저</summary>
+    public class ResManager
     {
         private string _user_folder;
         private string _xing_folder;
         private IDictionary<string, ResInfo> _resources = new Dictionary<string, ResInfo>();
 
+        /// <summary>생성자</summary>
         public ResManager(string userFolder, string xingFolder)
         {
             _user_folder = userFolder;
             _xing_folder = xingFolder;
         }
 
+        /// <summary>텍스트에서 리소스 정보를 설정합니다.</summary>
         public ResInfo? SetFromText(string text)
         {
             ResInfo resInfo = new();
@@ -327,6 +365,7 @@
             return null;
         }
 
+        /// <summary>파일에서 리소스 정보를 설정합니다.</summary>
         public ResInfo? SetFromFilePath(string filePath)
         {
             ResInfo resInfo = new(filePath);
@@ -338,6 +377,7 @@
             return null;
         }
 
+        /// <summary>폴더에서 리소스 정보를 설정합니다.</summary>
         public void LoadFromFolder(string folderPath)
         {
             foreach (string filePath in Directory.GetFiles(folderPath, "*.res"))
@@ -346,6 +386,7 @@
             }
         }
 
+        /// <summary>TR 코드로 리소스 정보를 가져옵니다.</summary>
         public ResInfo? GetResInfo(string tr_cd)
         {
             if (_resources.TryGetValue(tr_cd, out var info))

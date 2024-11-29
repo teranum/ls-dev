@@ -2,6 +2,9 @@
 using Microsoft.Win32;
 using System.Reflection;
 using System.Runtime.InteropServices;
+using System.Security.Policy;
+using LPARAM = nint;
+using WPARAM = nint;
 
 namespace LS.XingApi
 {
@@ -13,6 +16,9 @@ namespace LS.XingApi
         private const string XING_DLL = "xingAPI.dll";
         private const string XING64_DLL = "xingAPI64.dll";
         private delegate bool XING64_Init_Handler(string szFolder);
+        private const string REAL_DOMAIN = "api.ls-sec.co.kr";
+        private const string SIMUL_DOMAIN = "demo.ls-sec.co.kr";
+
         class WndForm : Form
         {
             public Action<IntPtr, uint, IntPtr, IntPtr>? WndProcHandler;
@@ -23,13 +29,6 @@ namespace LS.XingApi
             }
         }
 
-        enum RECEIVE_FLAGS
-        {
-            REQUEST_DATA = 1,
-            MESSAGE_DATA = 2,
-            SYSTEM_ERROR_DATA = 3,
-            RELEASE_DATA = 4,
-        }
         class RECV_PACKET_CLASS
         {
             public RECV_PACKET_CLASS(nint ptr)
@@ -95,27 +94,17 @@ namespace LS.XingApi
         //    public int RequestID = 0;
         //    public IList<BlockData> BlockTextDatas = [];
         //}
-        class AsyncNode(object[] objs)
+        class AsyncNode(int ident_id, Action<WPARAM, LPARAM> callback)
         {
-            public readonly int _ident_id = GetIdentId(objs);
-
-            public static int GetIdentId(object[] objs)
-            {
-                int id = 0;
-                for (int i = 0; i < objs.Length; i++)
-                {
-                    id = id * 31 + objs[i].GetHashCode();
-                }
-                return id;
-            }
+            public readonly int ident_id = ident_id;
+            public Action<WPARAM, LPARAM> callback = callback;
 
             private readonly ManualResetEvent _async_wait = new(initialState: false);
-            public Action<RECEIVE_FLAGS, object>? _async_OnReceiveDataHandler = null;
 
             public bool _async_evented = false;
-            public int _async_result = 0;
             public string _async_code = string.Empty;
             public string _async_msg = string.Empty;
+            public int _async_result = 0;
 
             public bool Set() => _async_wait.Set();
             public Task<bool> Wait(int millisecondsTimeout = -1)
@@ -133,15 +122,16 @@ namespace LS.XingApi
             }
         }
 
-        readonly List<AsyncNode> _async_list = [];
+        readonly List<AsyncNode> _async_nodes = [];
 
         private Form _win32Window;
         private const int WM_USER = 0x0400;
         private const int AsyncTimeOut = 10000;
 
-        const string _real_domain = "api.ls-sec.co.kr";
-        const string _simul_domain = "demo.ls-sec.co.kr";
-        const int _defaultTimeOut = 30;
+        private ResManager _resManager;
+        private IXingApi _module;
+        private string _xing_folder;
+        private bool _server_connected;
 
         /// <inheritdoc cref="MessageEventArgs"/>
         public event EventHandler<MessageEventArgs>? OnMessageEvent;
@@ -172,15 +162,10 @@ namespace LS.XingApi
         public string UserID { get; private set; } = string.Empty;
 
         /// <summary>
-        /// 마지막 에러 메시지
+        /// 마지막 메시지
         /// </summary>
-        public string LastErrorMessage { get; private set; } = string.Empty;
+        public string LastMessage { get; private set; } = string.Empty;
 
-        private ResManager _resManager;
-        private IXingApi _module;
-        private string _xing_folder;
-        private bool _server_connected;
-        private bool _user_logined;
         /// <summary>API객체 생성</summary>
         public XingApi(string apiFolder = "")
         {
@@ -272,9 +257,6 @@ namespace LS.XingApi
             return IXingApi.GetErrorMessage(nErrCode);
         }
 
-
-        bool _login_async_processing = false;
-
         /// <summary>
         /// 비동기 연결 요청
         /// </summary>
@@ -283,92 +265,70 @@ namespace LS.XingApi
         /// <param name="certPassword">공인인증 패스워드</param>
         /// <returns>ret: 0, 연결성공, 그외 오류코드</returns>
         /// <remarks>공인인증 패스워드 없는 경우, 모의서버로 로그인</remarks>
-        public async Task<(int ret, string msg)> ConnectAsync(string userId, string password, string certPassword = "")
+        public async Task<bool> ConnectAsync(string userId, string password, string certPassword = "")
         {
-            LastErrorMessage = string.Empty;
-            int nErrCode = 0;
-            if (!ModuleLoaded)
-            {
-                nErrCode = -900; // DLL 모듈 로드 실패
-                return (nErrCode, GetErrorMessage(nErrCode));
-            }
-
             if (Connected)
             {
-                return (0, "이미 로그인 되었습니다.");
+                LastMessage = "Already connected";
+                return true;
             }
 
-            UserID = userId;
-
-            if (_login_async_processing)
+            if (!ModuleLoaded)
             {
-                nErrCode = -901; // 이미 작동중 입니다.
-                return (nErrCode, GetErrorMessage(nErrCode));
+                LastMessage = "XingAPI.dll is not loaded";
+                return false;
             }
+
+            LastMessage = string.Empty;
+            _accountInfos.Clear();
 
             IsSimulation = certPassword.Length == 0;
+            _server_connected = IXingApi.ETK_Connect(Handle, IsSimulation ? SIMUL_DOMAIN : REAL_DOMAIN, 20001, WM_USER, -1, -1);
 
-            // 먼저 연결 진행
-            bool ret = IXingApi.ETK_Connect(Handle, IsSimulation ? _simul_domain : _real_domain, 20001, WM_USER, -1, -1);
-            if (!ret)
+            if (_server_connected)
             {
-                nErrCode = GetLastError();
-                Close();
-                return (nErrCode, GetErrorMessage(nErrCode));
+                var ret = IXingApi.ETK_Login(Handle, userId, password, certPassword, 0, bShowCertErrDlg: false);
+                if (ret)
+                {
+                    var code_msg = (string.Empty, string.Empty);
+                    var node = new AsyncNode(0, (wParam, lParam) =>
+                    {
+                        code_msg = (PtrToStringAnsi(wParam), PtrToStringAnsi(lParam));
+                    });
+                    _async_nodes.Add(node);
+                    await node.Wait();
+                    _async_nodes.Remove(node);
+
+                    LastMessage = $"[{code_msg.Item1}] {code_msg.Item2}";
+                    if (code_msg.Item1.Equals("0000"))
+                    {
+                        var account_count = IXingApi.ETK_GetAccountListCount();
+                        for (var i = 0; i < account_count; i++)
+                        {
+                            var Number = IXingApi.GetAccountList(i);
+                            var Name = IXingApi.GetAccountName(Number);
+                            var DetailName = IXingApi.GetAcctDetailName(Number);
+                            var NickName = IXingApi.GetAcctNickname(Number);
+                            _accountInfos.Add(new AccountInfo(Number, Name, DetailName, NickName));
+                        }
+                        Connected = true;
+                        UserID = userId;
+                        return true;
+                    }
+                }
+                else
+                {
+                    LastMessage = "로그인 실패.";
+                }
+            }
+            else
+            {
+                int nErrCode = GetLastError();
+                LastMessage = $"[{nErrCode}] {GetErrorMessage(nErrCode)}";
             }
 
-            // 로그인 진행
-            ret = IXingApi.ETK_Login(Handle, userId, password, certPassword, 0, bShowCertErrDlg: false);
-            if (!ret)
-            {
-                nErrCode = GetLastError();
-                Close();
-                return (nErrCode, GetErrorMessage(nErrCode));
-            }
-
-            _login_async_processing = true;
-
-            var newAsync = new AsyncNode(["ConnectAsync"]);
-            _async_list.Add(newAsync);
-            await newAsync.Wait(AsyncTimeOut);
-            _async_list.Remove(newAsync);
-
-            nErrCode = newAsync._async_result;
-
-            _login_async_processing = false;
-
-            if (nErrCode < 0)
-            {
-                Close();
-                return (nErrCode, GetErrorMessage(nErrCode));
-            }
-
-            if (!newAsync._async_code.Equals("0000"))
-            {
-                nErrCode = -2; // 서버접속 실패
-                Close();
-                return (nErrCode, newAsync._async_msg.Length > 0 ? newAsync._async_msg : GetErrorMessage(nErrCode));
-            }
-
-            Connected = true;
-
-            // 계좌 정보 조회
-            _accountInfos.Clear();
-            int nCount = IXingApi.ETK_GetAccountListCount();
-            for (int i = 0; i < nCount; i++)
-            {
-                string Number = IXingApi.GetAccountList(i);
-                string Name = IXingApi.GetAccountName(Number);
-                string DetailName = IXingApi.GetAcctDetailName(Number);
-
-                _accountInfos.Add(new AccountInfo(Number, Name, DetailName, IsSimulation ? "0000" : string.Empty));
-            }
-
-            var saveLoginMessage = newAsync._async_msg;
-
-            if (LastErrorMessage.Length == 0)
-                LastErrorMessage = saveLoginMessage;
-            return (0, LastErrorMessage);
+            Close();
+            return false;
         }
 
         /// <summary>연결 해제</summary>
@@ -376,10 +336,10 @@ namespace LS.XingApi
         {
             if (!ModuleLoaded)
                 return;
-            if (_user_logined)
+            if (Connected)
             {
                 IXingApi.ETK_Logout(Handle);
-                _user_logined = false;
+                Connected = false;
             }
             if (_server_connected)
             {
@@ -405,7 +365,27 @@ namespace LS.XingApi
                 case XM.XM_DISCONNECT:
                     {
                         Connected = false;
-                        OnMessageEvent?.Invoke(this, new(IsSystemError: true, "-11111", "서버연결 해제"));
+                        OnMessageEvent?.Invoke(this, new("DISCONNECT"));
+                    }
+                    break;
+                case XM.XM_LOGOUT:
+                    {
+                        Connected = false;
+                        OnMessageEvent?.Invoke(this, new("LOGOUT"));
+                    }
+                    break;
+                case XM.XM_LOGIN:
+                    {
+                        // ETK_Login() 함수가 호출 된 후 Login 과정이 완료되었을 때 호출
+                        // WPARAM: Message Code, 문자열 형태,“0000” 이면 성공, 그 외에는 실패
+                        // LPARAM: Message Text
+                        int ident_id = 0;
+                        var async_node = _async_nodes.Find(x => x.ident_id == ident_id);
+                        if (async_node is not null)
+                        {
+                            async_node.callback(wParam, lParam);
+                            async_node.Set();
+                        }
                     }
                     break;
                 case XM.XM_RECEIVE_DATA:
@@ -419,67 +399,40 @@ namespace LS.XingApi
                         {
                             case RECEIVE_FLAGS.REQUEST_DATA:
                                 {
-                                    // LPARAM : RECV_PACKET의 메모리 주소
-                                    var data = new RECV_PACKET_CLASS(lParam);
-
-                                    int async_ident_id = AsyncNode.GetIdentId([data.nRqID]);
-                                    var async_node = _async_list.Find(x => x._ident_id == async_ident_id);
-                                    if (async_node is not null)
-                                        async_node._async_OnReceiveDataHandler?.Invoke(receiveFlag, data);
-                                    //else
-                                    //    OnReceiveData?.Invoke(this, new(receiveFlag, data));
+                                    int nRqID = Marshal.PtrToStructure<int>(lParam);
+                                    var async_node = _async_nodes.Find(x => x.ident_id == nRqID);
+                                    async_node?.callback(wParam, lParam);
                                 }
                                 break;
                             case RECEIVE_FLAGS.MESSAGE_DATA:
                             case RECEIVE_FLAGS.SYSTEM_ERROR_DATA:
                                 {
-                                    // LPARAM : MSG_PACKET_CLASS 메모리 주소
-                                    var data = new MSG_PACKET_CLASS(lParam);
-                                    if (data.nRqID > 0)
+                                    int nRqID = Marshal.PtrToStructure<int>(lParam);
+                                    var async_node = _async_nodes.Find(x => x.ident_id == nRqID);
+                                    if (async_node is not null)
                                     {
-                                        int async_ident_id = AsyncNode.GetIdentId([data.nRqID]);
-                                        var async_node = _async_list.Find(x => x._ident_id == async_ident_id);
-                                        if (async_node is not null)
-                                        {
-                                            async_node._async_OnReceiveDataHandler?.Invoke(receiveFlag, data);
-                                            async_node.Set();
-                                            break;
-                                        }
-                                    }
-
-                                    if (data.nIsSystemError == 1)
-                                    {
-                                        int.TryParse(data.szMsgCode, out int nMsgCode);
-                                        if (nMsgCode != _nRqID_last) // 이미 요청실패로 처리된 경우는 무시
-                                            OnMessageEvent?.Invoke(this, new(IsSystemError: true, data.szMsgCode, data.lpszMessageData));
-                                    }
-                                    else
-                                    {
-                                        OnMessageEvent?.Invoke(this, new(IsSystemError: false, data.szMsgCode, data.lpszMessageData));
+                                        async_node.callback(wParam, lParam);
+                                        async_node.Set();
                                     }
 
                                     IXingApi.ETK_ReleaseMessageData(lParam);
                                     if (receiveFlag == RECEIVE_FLAGS.SYSTEM_ERROR_DATA)
                                     {
-                                        IXingApi.ETK_ReleaseRequestData(data.nRqID);
+                                        IXingApi.ETK_ReleaseRequestData(nRqID);
                                     }
                                 }
                                 break;
                             case RECEIVE_FLAGS.RELEASE_DATA:
                                 {
                                     // LPARAM : 정수로 Requests ID를 의미
-                                    int nRequestID = lParam.ToInt32();
-
-                                    int async_ident_id = AsyncNode.GetIdentId([nRequestID]);
-                                    var async_node = _async_list.Find(x => x._ident_id == async_ident_id);
+                                    int nRqID = lParam.ToInt32();
+                                    var async_node = _async_nodes.Find(x => x.ident_id == nRqID);
                                     if (async_node is not null)
                                     {
+                                        async_node.callback(wParam, lParam);
                                         async_node.Set();
                                     }
-                                    //else
-                                    //    OnReceiveData?.Invoke(this, new(receiveFlag, nRequestID));
-
-                                    IXingApi.ETK_ReleaseRequestData(nRequestID);
+                                    IXingApi.ETK_ReleaseRequestData(nRqID);
                                 }
                                 break;
                             default:
@@ -487,46 +440,20 @@ namespace LS.XingApi
                         }
                     }
                     break;
-                case XM.XM_LOGIN:
-                    {
-                        // ETK_Login() 함수가 호출 된 후 Login 과정이 완료되었을 때 호출
-                        // WPARAM: Message Code, 문자열 형태,“0000” 이면 성공, 그 외에는 실패
-                        // LPARAM: Message Text
-                        string szCode = PtrToStringAnsi(wParam);
-                        string szMsg = PtrToStringAnsi(lParam);
-
-                        int async_ident_id = AsyncNode.GetIdentId(["ConnectAsync"]);
-                        var async_node = _async_list.Find(x => x._ident_id == async_ident_id);
-                        if (async_node is not null)
-                        {
-                            async_node._async_code = szCode;
-                            async_node._async_msg = szMsg;
-                            async_node.Set();
-                        }
-                    }
-                    break;
-                case XM.XM_LOGOUT:
-                    {
-                        Connected = false;
-                        OnMessageEvent?.Invoke(this, new(IsSystemError: true, "-11111", "로그아웃"));
-                    }
-                    break;
                 case XM.XM_TIMEOUT_DATA:
                     {
                         // 조회 TR에 대한 응답이 Timeout 되었을 때 호출
                         // WPARAM: 사용안함
                         // LPARAM: Requests ID
-                        int nRequestID = lParam.ToInt32();
+                        int nRqID = lParam.ToInt32();
 
-                        int async_ident_id = AsyncNode.GetIdentId([nRequestID]);
-                        var async_node = _async_list.Find(x => x._ident_id == async_ident_id);
+                        var async_node = _async_nodes.Find(x => x.ident_id == nRqID);
                         if (async_node is not null)
                         {
                             async_node._async_result = -902;
                             async_node.Set();
                         }
-                        //OnReceiveData?.Invoke(this, new(RECEIVE_FLAGS.TIME_OUT_DATA, nRequestID));
-                        IXingApi.ETK_ReleaseRequestData(nRequestID);
+                        IXingApi.ETK_ReleaseRequestData(nRqID);
                     }
                     break;
                 case XM.XM_RECEIVE_LINK_DATA:
@@ -534,8 +461,7 @@ namespace LS.XingApi
                         // HTS -> API로 연동을 등록하면, HTS에서 연동 정보가 발생시에 호출, 사용방식은 XM_RECEIVE_REAL_DATA 수신과 동일
                         // WPARAM: LINK_DATA
                         // LPARAM: LINKDATRRA_RECV_MSG 구조체 데이터
-                        var data = new LINKDATA_RECV_MSG_CLASS(lParam);
-                        //OnReceiveData?.Invoke(this, new(RECEIVE_FLAGS.LINK_DATA, data));
+                        //var data = new LINKDATA_RECV_MSG_CLASS(lParam);
                         IXingApi.ETK_ReleaseMessageData(lParam);
                     }
                     break;
@@ -606,31 +532,112 @@ namespace LS.XingApi
             Requests = IXingApi.ETK_GetTRCountRequest(tr_cd),
         };
 
-        private int _nRqID_last = -9999;
+        /// <summary>
+        /// 비동기 TR 요청
+        /// </summary>
+        /// <param name="tr_cd">증권 거래코드</param>
+        /// <param name="in_datas">입력 바이너리 데이터</param>
+        /// <param name="cont_yn">연속여부</param>
+        /// <param name="cont_key">연속일 경우 그전에 내려온 연속키 값 올림</param>
+        /// <returns>응답데이터, null인경우 오류, 오류 메시지는 LastMessage 참고</returns>
+        public Task<ResponseTrData?> RequestAsync(string tr_cd, string in_datas, bool cont_yn = false, string cont_key = "")
+            => Inter_RequestAsync(tr_cd, in_datas.Split([',']).ToList(), cont_yn, cont_key);
 
         /// <summary>
         /// 비동기 TR 요청
         /// </summary>
         /// <param name="tr_cd">증권 거래코드</param>
-        /// <param name="indatas">입력 바이너리 데이터</param>
+        /// <param name="in_datas">입력 바이너리 데이터</param>
+        /// <param name="cont_yn">연속여부</param>
         /// <param name="cont_key">연속일 경우 그전에 내려온 연속키 값 올림</param>
-        /// <returns>응답데이터, null인경우 오류, 오류 메시지는 LastErrorMessage 참고</returns>
-        public Task<ResponseTrData> RequestAsync(string tr_cd, string indatas, string cont_key = "") => RequestAsync(tr_cd, indatas.Split([',']).ToList(), cont_key);
+        /// <returns>응답데이터, null인경우 오류, 오류 메시지는 LastMessage 참고</returns>
+        public async Task<ResponseTrData?> RequestAsync(string tr_cd, IList<string> in_datas, bool cont_yn = false, string cont_key = "")
+            => await Inter_RequestAsync(tr_cd, in_datas, cont_yn, cont_key);
 
         /// <summary>
         /// 비동기 TR 요청
         /// </summary>
         /// <param name="tr_cd">증권 거래코드</param>
-        /// <param name="indatas">입력 바이너리 데이터</param>
+        /// <param name="in_datas">입력 바이너리 데이터</param>
+        /// <param name="cont_yn">연속여부</param>
         /// <param name="cont_key">연속일 경우 그전에 내려온 연속키 값 올림</param>
-        /// <returns>응답데이터, null인경우 오류, 오류 메시지는 LastErrorMessage 참고</returns>
-        public async Task<ResponseTrData> RequestAsync(string tr_cd, IEnumerable<string> indatas, string cont_key = "")
+        /// <returns>응답데이터, null인경우 오류, 오류 메시지는 LastMessage 참고</returns>
+        public Task<ResponseTrData?> RequestAsync(string tr_cd, IDictionary<string, object> in_datas, bool cont_yn = false, string cont_key = "")
+            => Inter_RequestAsync(tr_cd, in_datas, cont_yn, cont_key);
+
+        private async Task<ResponseTrData?> Inter_RequestAsync(string tr_cd, object in_datas, bool cont_yn = false, string cont_key = "")
         {
-            _nRqID_last = -9999;
+            if (!Connected)
+            {
+                LastMessage = "Not connected";
+                return null;
+            }
+
+            var res_info = _resManager.GetResInfo(tr_cd);
+            if (res_info is null)
+            {
+                LastMessage = "TR 정보를 찾을 수 없습니다.";
+                return null;
+            }
+
+            if (!res_info.is_func)
+            {
+                LastMessage = "TR 요청이 아닙니다.";
+                return null;
+            }
+
             var response = new ResponseTrData()
             {
                 tr_cd = tr_cd,
+                res = res_info,
             };
+
+            var inblocks_count = res_info.in_blocks.Count;
+            if (inblocks_count == 1)
+            {
+                var inblock = res_info.in_blocks[0];
+                var in_fields = inblock.fields;
+                var in_block_field_count = in_fields.Count;
+                var aligned_in_block_datas = new string[in_block_field_count];
+                var correct_in_block_dict = new Dictionary<string, object>();
+                (string value, string error) get_correct_field_value(FieldSpec field, object value)
+                {
+                    var size = field.size;
+                    if (size == 0)
+                        return (value.ToString()!, string.Empty);
+                    if (value is null)
+                        return ("null", "Value is null.");
+                    var str_val = string.Empty;
+                    if (field.type == FieldSpec.VarType.STRING)
+                    {
+                        return (value.ToString()!, string.Empty);
+
+                    }
+                    //if (field.type == FieldSpec.FieldType.INT)
+                    //    return ((int)value).ToString();
+                    //if (field.type == FieldSpec.FieldType.LONG)
+                    //    return ((long)value).ToString();
+                    //if (field.type == FieldSpec.FieldType.FLOAT)
+                    //    return ((float)value).ToString();
+                    //if (field.type == FieldSpec.FieldType.DOUBLE)
+                    //    return ((double)value).ToString();
+                    return (string.Empty, string.Empty);
+                }
+            }
+            else if (inblocks_count == 2)
+            {
+
+            }
+            else if (inblocks_count > 2)
+            {
+                LastMessage = "자원정보 inblock개수가 2이상입니다, 현재버전 지원 불가.";
+                return null;
+            }
+            else
+            {
+                LastMessage = "자원정보에 inblock이 없습니다, 현재버전 지원 불가.";
+                return null;
+            }
             /*
             int nRet = -905; // 자원정보가 없습니다.
 
@@ -718,7 +725,7 @@ namespace LS.XingApi
                 }
             }
 
-            LastErrorMessage = string.Empty;
+            LastMessage = string.Empty;
 
             if (tr_cd.Equals("t1857") || tr_cd.Equals("CHARTINDEX") || tr_cd.Equals("CHARTEXCEL"))
                 nRet = IXingApi.ETK_RequestService(Handle, tr_cd, inBytes);
@@ -803,7 +810,7 @@ namespace LS.XingApi
                                 {
                                     if (nDataLength < 5)
                                     {
-                                        LastErrorMessage = "수신 데이터 길이 오류";
+                                        LastMessage = "수신 데이터 길이 오류";
                                         break;
                                     }
                                     // 배열은 데이터 앞에 5byte로 배열 갯수 문자열이 온다.
@@ -818,7 +825,7 @@ namespace LS.XingApi
                                         int nTotalFrameSize = nFrameSize * nFrameCount;
                                         if (nDataLength < nTotalFrameSize)
                                         {
-                                            LastErrorMessage = "수신 데이터 길이 오류";
+                                            LastMessage = "수신 데이터 길이 오류";
                                             break;
                                         }
                                         for (int i = 0; i < nFrameCount; i++)
@@ -842,7 +849,7 @@ namespace LS.XingApi
                                     if (resSpec.is_attr) nFrameSize += specOutBlock.Fields.Count;
                                     if (nDataLength < nFrameSize)
                                     {
-                                        LastErrorMessage = "수신 데이터 길이 오류";
+                                        LastMessage = "수신 데이터 길이 오류";
                                         break;
                                     }
                                     string[] strings = new string[specOutBlock.Fields.Count];
@@ -930,7 +937,7 @@ namespace LS.XingApi
             var resInfo = _resManager.GetResInfo(tr_cd);
             if (resInfo == null)
             {
-                LastErrorMessage = "TR 정보를 찾을 수 없습니다.";
+                LastMessage = "TR 정보를 찾을 수 없습니다.";
                 return false;
             }
             bool bRet;
@@ -945,7 +952,7 @@ namespace LS.XingApi
             if (!bRet)
             {
                 int nErrorCode = GetLastError();
-                LastErrorMessage = $"[{nErrorCode}]: {GetErrorMessage(nErrorCode)}";
+                LastMessage = $"[{nErrorCode}]: {GetErrorMessage(nErrorCode)}";
             }
             return bRet;
         }
