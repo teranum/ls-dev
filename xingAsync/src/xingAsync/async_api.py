@@ -472,10 +472,10 @@ class XingApi:
                         else:
                             nFrameCount = 1
                         rows, cols = (nFrameCount, len(out_block.fields))
-                        datas = [None] * rows
-                        if nDataLength < out_block.record_size * nFrameCount:
+                        if nDataLength < out_block.record_size * rows:
                             # errMsg = "수신 데이터 길이 오류."
                             break
+                        datas = [None] * rows
                         for i in range(rows):
                             col_datas = {}
                             for j in range(cols):
