@@ -104,10 +104,10 @@ namespace LS.XingApi.Native
         /// <param name="nTimeOut">연결시도 시간 - millisecond단위(1/1000초), -1 은 기본값(10초)으로 설정</param>
         /// <param name="nSendMaxPacketSize">전송시 최대 Packet Size, -1은 기본값으로 설정</param>
         /// <returns>0(FALSE) 이면 실패, 1(TRUE) 이면 성공</returns>
-        public static bool ETK_Connect(HWND hWnd, string pszSvrIP, int nPort, int nStartMsgID, int nTimeOut, int nSendMaxPacketSize)
+        public bool ETK_Connect(HWND hWnd, string pszSvrIP, int nPort, int nStartMsgID, int nTimeOut, int nSendMaxPacketSize)
             => _ETK_Connect(hWnd, pszSvrIP, nPort, nStartMsgID, nTimeOut, nSendMaxPacketSize);
         private delegate bool ETK_Connect_Handler(HWND hWnd, string pszSvrIP, int nPort, int nStartMsgID, int nTimeOut, int nSendMaxPacketSize);
-        private static ETK_Connect_Handler _ETK_Connect;
+        private ETK_Connect_Handler _ETK_Connect;
 
         /// <summary>
         /// 서버와의 연결여부를 취득합니다.
@@ -122,9 +122,9 @@ namespace LS.XingApi.Native
         /// 서버와의 연결을 종료합니다.
         /// </summary>
         /// <returns>무조건 1(TRUE)</returns>
-        public static bool ETK_Disconnect() => _ETK_Disconnect();
+        public bool ETK_Disconnect() => _ETK_Disconnect();
         private delegate bool ETK_Disconnect_Handler();
-        private static ETK_Disconnect_Handler _ETK_Disconnect;
+        private ETK_Disconnect_Handler _ETK_Disconnect;
 
         // 로그인
         /// <summary>
@@ -137,26 +137,26 @@ namespace LS.XingApi.Native
         /// <param name="nType">무조건 0</param>
         /// <param name="bShowCertErrDlg">공인인증 시 발생한 에러에 대해 미리 정의된 Dialog를 표시할 지 여부</param>
         /// <returns>0 이 아니면 성공(로그인 성공이 아니라 서버로 로그인요청 전송성공을 의미), 0 이면 실패</returns>
-        public static bool ETK_Login(HWND hWnd, string pszID, string pszPwd, string pszCertPwd, int nType, bool bShowCertErrDlg)
+        public bool ETK_Login(HWND hWnd, string pszID, string pszPwd, string pszCertPwd, int nType, bool bShowCertErrDlg)
             => _ETK_Login(hWnd, pszID, pszPwd, pszCertPwd, nType, bShowCertErrDlg);
         private delegate bool ETK_Login_Handler(HWND hWnd, string pszID, string pszPwd, string pszCertPwd, int nType, bool bShowCertErrDlg);
-        private static ETK_Login_Handler _ETK_Login;
+        private ETK_Login_Handler _ETK_Login;
 
         /// <summary>
         /// 로그아웃합니다.
         /// </summary>
         /// <param name="hWnd"></param>
         /// <returns></returns>
-        public static bool ETK_Logout(HWND hWnd) => _ETK_Logout(hWnd);
+        public bool ETK_Logout(HWND hWnd) => _ETK_Logout(hWnd);
         private delegate bool ETK_Logout_Handler(HWND hWnd);
         /// <inheritdoc cref="ETK_Logout_Handler"/>
-        private static ETK_Logout_Handler _ETK_Logout;
+        private ETK_Logout_Handler _ETK_Logout;
 
         /// <summary>
         /// 마지막에 발생한 Error Code를 취득합니다.
         /// </summary>
         /// <returns></returns>
-        public static int ETK_GetLastError() => _ETK_GetLastError();
+        public int ETK_GetLastError() => _ETK_GetLastError();
         private delegate int ETK_GetLastError_Handler();
         /// <inheritdoc cref="ETK_GetLastError_Handler"/>
         private static ETK_GetLastError_Handler _ETK_GetLastError;
@@ -168,7 +168,7 @@ namespace LS.XingApi.Native
         /// <param name="pszMsg">Message를 받을 Buffer, 충분한 메모리가 확보되어야 합니다</param>
         /// <param name="nMsgSize">Buffer 크기</param>
         /// <returns>Message 길이</returns>
-        public static int ETK_GetErrorMessage(int nErrorCode, StringBuilder pszMsg, int nMsgSize)
+        public int ETK_GetErrorMessage(int nErrorCode, StringBuilder pszMsg, int nMsgSize)
             => _ETK_GetErrorMessage(nErrorCode, pszMsg, nMsgSize);
         private delegate int ETK_GetErrorMessage_Handler(int nErrorCode, StringBuilder pszMsg, int nMsgSize);
         private static ETK_GetErrorMessage_Handler _ETK_GetErrorMessage;
@@ -186,9 +186,12 @@ namespace LS.XingApi.Native
         /// <param name="pszNextKey">연속조회 키</param>
         /// <param name="nTimeOut">설정한 시간(초)내에 수신 데이터가 오지 않을 경우 XM_TIMEOUT 이 발생합니다.</param>
         /// <returns>0보다 작을 경우엔 실패이며, 0 또는 0보다 클 경우엔 Requests ID를 반환합니다.</returns>
-        public static int ETK_Request(HWND hWnd, string pszCode, byte[] lpData, int nDataSize, bool bNext, string pszNextKey, int nTimeOut)
+        public int ETK_Request(HWND hWnd, string pszCode, string lpData, int nDataSize, bool bNext, string pszNextKey, int nTimeOut)
             => _ETK_Request(hWnd, pszCode, lpData, nDataSize, bNext, pszNextKey, nTimeOut);
-        private delegate int ETK_Request_Handler(HWND hWnd, string pszCode, [MarshalAs(UnmanagedType.LPArray, SizeParamIndex = 0)] byte[] lpData, int nDataSize, bool bNext, string pszNextKey, int nTimeOut);
+        //public static int ETK_Request(HWND hWnd, string pszCode, byte[] lpData, int nDataSize, bool bNext, string pszNextKey, int nTimeOut)
+        //    => _ETK_Request(hWnd, pszCode, lpData, nDataSize, bNext, pszNextKey, nTimeOut);
+        //private delegate int ETK_Request_Handler(HWND hWnd, string pszCode, [MarshalAs(UnmanagedType.LPArray, SizeParamIndex = 0)] byte[] lpData, int nDataSize, bool bNext, string pszNextKey, int nTimeOut);
+        private delegate int ETK_Request_Handler(HWND hWnd, string pszCode, string lpData, int nDataSize, bool bNext, string pszNextKey, int nTimeOut);
         private static ETK_Request_Handler _ETK_Request;
 
         /// <summary>
@@ -197,7 +200,7 @@ namespace LS.XingApi.Native
         /// MSG_PACKET이 System Error 이면 Requests ID도 같이 해제합니다.
         /// </summary>
         /// <param name="nRequestID">해제할 Requests ID</param>
-        public static void ETK_ReleaseRequestData(int nRequestID) => _ETK_ReleaseRequestData(nRequestID);
+        public void ETK_ReleaseRequestData(int nRequestID) => _ETK_ReleaseRequestData(nRequestID);
         private delegate void ETK_ReleaseRequestData_Handler(int nRequestID);
         private static ETK_ReleaseRequestData_Handler _ETK_ReleaseRequestData;
 
@@ -206,7 +209,7 @@ namespace LS.XingApi.Native
         /// MSG_PACKET이 System Error 이면 Requests ID도 같이 해제합니다
         /// </summary>
         /// <param name="lparam">XM_RECEIVE_DATA로 받은 LPARAM 데이터, MSG_PACKET_CLASS 의 Memory Pointer 입니다.</param>
-        public static void ETK_ReleaseMessageData(LPARAM lparam) => _ETK_ReleaseMessageData(lparam);
+        public void ETK_ReleaseMessageData(LPARAM lparam) => _ETK_ReleaseMessageData(lparam);
         private delegate void ETK_ReleaseMessageData_Handler(LPARAM lparam);
         private static ETK_ReleaseMessageData_Handler _ETK_ReleaseMessageData;
 
@@ -222,7 +225,7 @@ namespace LS.XingApi.Native
         /// <param name="pszData">등록할 데이터</param>
         /// <param name="nDataUnitLen">등록할 데이터의 Unit 크기</param>
         /// <returns>0(FALSE)이면 실패, 1(TRUE)이면 성공</returns>
-        public static bool ETK_AdviseRealData(HWND hWnd, string pszTrCode, string pszData, int nDataUnitLen)
+        public bool ETK_AdviseRealData(HWND hWnd, string pszTrCode, string pszData, int nDataUnitLen)
             => _ETK_AdviseRealData(hWnd, pszTrCode, pszData, nDataUnitLen);
         private delegate bool ETK_AdviseRealData_Handler(HWND hWnd, string pszTrCode, string pszData, int nDataUnitLen);
         private static ETK_AdviseRealData_Handler _ETK_AdviseRealData;
@@ -237,7 +240,7 @@ namespace LS.XingApi.Native
         /// <param name="pszData">등록 해제할 데이터</param>
         /// <param name="nDataUnitLen">등록 해제할 데이터의 Unit 크기</param>
         /// <returns>0(FALSE)이면 실패, 1(TRUE)이면 성공</returns>
-        public static bool ETK_UnadviseRealData(HWND hWnd, string pszTrCode, string pszData, int nDataUnitLen)
+        public bool ETK_UnadviseRealData(HWND hWnd, string pszTrCode, string pszData, int nDataUnitLen)
             => _ETK_UnadviseRealData(hWnd, pszTrCode, pszData, nDataUnitLen);
         private delegate bool ETK_UnadviseRealData_Handler(HWND hWnd, string pszTrCode, string pszData, int nDataUnitLen);
         private static ETK_UnadviseRealData_Handler _ETK_UnadviseRealData;
@@ -255,7 +258,7 @@ namespace LS.XingApi.Native
         /// 계좌리스트의 개수를 취득합니다.
         /// </summary>
         /// <returns>계좌 갯수</returns>
-        public static int ETK_GetAccountListCount() => _ETK_GetAccountListCount();
+        public int ETK_GetAccountListCount() => _ETK_GetAccountListCount();
         private delegate int ETK_GetAccountListCount_Handler();
         private static ETK_GetAccountListCount_Handler _ETK_GetAccountListCount;
 
@@ -396,7 +399,7 @@ namespace LS.XingApi.Native
         /// </summary>
         /// <param name="pszCode">TR Code</param>
         /// <returns>TR의 초당 전송 가능 횟수</returns>
-        public static int ETK_GetTRCountPerSec(string pszCode) => _ETK_GetTRCountPerSec(pszCode);
+        public int ETK_GetTRCountPerSec(string pszCode) => _ETK_GetTRCountPerSec(pszCode);
         private delegate int ETK_GetTRCountPerSec_Handler(string pszCode);
         private static ETK_GetTRCountPerSec_Handler _ETK_GetTRCountPerSec;
 
@@ -406,16 +409,16 @@ namespace LS.XingApi.Native
         /// </summary>
         /// <param name="pszCode">TR Code</param>
         /// <returns>Base 시간(초단위)</returns>
-        public static int ETK_GetTRCountBaseSec(string pszCode) => ETK_GetTRCountBaseSec(pszCode);
+        public int ETK_GetTRCountBaseSec(string pszCode) => _ETK_GetTRCountBaseSec(pszCode);
         private delegate int ETK_GetTRCountBaseSec_Handler(string pszCode);
-        private static ETK_GetTRCountBaseSec_Handler _ETK_GetTRCountBaseSec;
+        private ETK_GetTRCountBaseSec_Handler _ETK_GetTRCountBaseSec;
 
         /// <summary>
         /// TR의 초당 전송 가능 횟수를 취득합니다.
         /// </summary>
         /// <param name="pszCode">TR Code</param>
         /// <returns>10분내 요청한 해당 TR의 총 횟수</returns>
-        public static int ETK_GetTRCountRequest(string pszCode) => _ETK_GetTRCountRequest(pszCode);
+        public int ETK_GetTRCountRequest(string pszCode) => _ETK_GetTRCountRequest(pszCode);
         private delegate int ETK_GetTRCountRequest_Handler(string pszCode);
         private static ETK_GetTRCountRequest_Handler _ETK_GetTRCountRequest;
 
@@ -424,7 +427,7 @@ namespace LS.XingApi.Native
         /// </summary>
         /// <param name="pszCode">TR Code</param>
         /// <returns>TR의 10분당 제한 건수. 제한이 없는 경우 0 을 반환합니다.</returns>
-        public static int ETK_GetTRCountLimit(string pszCode) => _ETK_GetTRCountLimit(pszCode);
+        public int ETK_GetTRCountLimit(string pszCode) => _ETK_GetTRCountLimit(pszCode);
         private delegate int ETK_GetTRCountLimit_Handler(string pszCode);
         private static ETK_GetTRCountLimit_Handler _ETK_GetTRCountLimit;
 
@@ -543,8 +546,10 @@ namespace LS.XingApi.Native
         /// <br/> 
         /// <br/> 	
         /// </remarks>
-        public static int ETK_RequestService(HWND hWnd, string pszCode, byte[] pszData) => _ETK_RequestService(hWnd, pszCode, pszData);
-        private delegate int ETK_RequestService_Handler(HWND hWnd, string pszCode, [MarshalAs(UnmanagedType.LPArray, SizeParamIndex = 0)] byte[] pszData);
+        public int ETK_RequestService(HWND hWnd, string pszCode, string pszData) => _ETK_RequestService(hWnd, pszCode, pszData);
+        private delegate int ETK_RequestService_Handler(HWND hWnd, string pszCode, string pszData);
+        //public static int ETK_RequestService(HWND hWnd, string pszCode, byte[] pszData) => _ETK_RequestService(hWnd, pszCode, pszData);
+        //private delegate int ETK_RequestService_Handler(HWND hWnd, string pszCode, [MarshalAs(UnmanagedType.LPArray, SizeParamIndex = 0)] byte[] pszData);
         private static ETK_RequestService_Handler _ETK_RequestService;
 
         /// <summary>
@@ -596,7 +601,7 @@ namespace LS.XingApi.Native
         /// <br/>     lpData		- t1857 TR의 OutBlock의 AlertNum 값
         /// <br/>
         /// </remarks>
-        public static int ETK_RemoveService(HWND hWnd, string pszCode, string pszData) => _ETK_RemoveService(hWnd, pszCode, pszData);
+        public int ETK_RemoveService(HWND hWnd, string pszCode, string pszData) => _ETK_RemoveService(hWnd, pszCode, pszData);
         private delegate int ETK_RemoveService_Handler(HWND hWnd, string pszCode, string pszData);
         private static ETK_RemoveService_Handler _ETK_RemoveService;
 
@@ -726,8 +731,8 @@ namespace LS.XingApi.Native
         /// }
         ///	</_async_code>
         /// </remarks>
-        public int ETK_Decompress(string pszSrc, string pszDest, int nSrcLen) => _ETK_Decompress(pszSrc, pszDest, nSrcLen);
-        private delegate int ETK_Decompress_Handler(string pszSrc, string pszDest, int nSrcLen);
+        public int ETK_Decompress(IntPtr pszSrc, IntPtr pszDest, int nSrcLen) => _ETK_Decompress(pszSrc, pszDest, nSrcLen);
+        private delegate int ETK_Decompress_Handler(IntPtr pszSrc, IntPtr pszDest, int nSrcLen);
         private ETK_Decompress_Handler _ETK_Decompress;
 
         /// <summary>차트라이브러리 연결</summary>
@@ -763,7 +768,7 @@ namespace LS.XingApi.Native
 
 
         /// <inheritdoc cref="ETK_GetErrorMessage"/>
-        public static string GetErrorMessage(int nErrorCode)
+        public string GetErrorMessage(int nErrorCode)
         {
             StringBuilder sb = new(255);
             _ = ETK_GetErrorMessage(nErrorCode, sb, sb.Capacity);
@@ -771,7 +776,7 @@ namespace LS.XingApi.Native
         }
 
         /// <inheritdoc cref="ETK_GetAccountList"/>
-        public static string GetAccountList(int nIndex)
+        public string GetAccountList(int nIndex)
         {
             StringBuilder sb = new(255);
             ETK_GetAccountList(nIndex, sb, sb.Capacity);
@@ -779,7 +784,7 @@ namespace LS.XingApi.Native
         }
 
         /// <inheritdoc cref="ETK_GetAccountName"/>
-        public static string GetAccountName(string szAccNumber)
+        public string GetAccountName(string szAccNumber)
         {
             StringBuilder sb = new(255);
             ETK_GetAccountName(szAccNumber, sb, sb.Capacity);
@@ -787,7 +792,7 @@ namespace LS.XingApi.Native
         }
 
         /// <inheritdoc cref="ETK_GetAcctDetailName"/>
-        public static string GetAcctDetailName(string szAccNumber)
+        public string GetAcctDetailName(string szAccNumber)
         {
             StringBuilder sb = new(255);
             ETK_GetAcctDetailName(szAccNumber, sb, sb.Capacity);
@@ -795,7 +800,7 @@ namespace LS.XingApi.Native
         }
 
         /// <inheritdoc cref="ETK_GetAcctNickname"/>
-        public static string GetAcctNickname(string szAccNumber)
+        public string GetAcctNickname(string szAccNumber)
         {
             StringBuilder sb = new(255);
             ETK_GetAcctNickname(szAccNumber, sb, sb.Capacity);
@@ -803,7 +808,7 @@ namespace LS.XingApi.Native
         }
 
         /// <inheritdoc cref="ETK_GetCommMedia"/>
-        public static string GetCommMedia()
+        public string GetCommMedia()
         {
             StringBuilder sb = new(255);
             ETK_GetCommMedia(sb);
@@ -811,7 +816,7 @@ namespace LS.XingApi.Native
         }
 
         /// <inheritdoc cref="ETK_GetETKMedia"/>
-        public static string GetETKMedia()
+        public string GetETKMedia()
         {
             StringBuilder sb = new(255);
             ETK_GetETKMedia(sb);
@@ -819,7 +824,7 @@ namespace LS.XingApi.Native
         }
 
         /// <inheritdoc cref="ETK_GetClientIP"/>
-        public static string GetClientIP()
+        public string GetClientIP()
         {
             StringBuilder sb = new(255);
             ETK_GetClientIP(sb);
@@ -827,7 +832,7 @@ namespace LS.XingApi.Native
         }
 
         /// <inheritdoc cref="ETK_GetServerName"/>
-        public static string GetServerName()
+        public string GetServerName()
         {
             StringBuilder sb = new(255);
             ETK_GetServerName(sb);
@@ -835,7 +840,7 @@ namespace LS.XingApi.Native
         }
 
         /// <inheritdoc cref="ETK_GetAPIPath"/>
-        public static string GetAPIPath()
+        public string GetAPIPath()
         {
             StringBuilder sb = new(255);
             ETK_GetAPIPath(sb);
@@ -843,7 +848,7 @@ namespace LS.XingApi.Native
         }
 
         /// <inheritdoc cref="ETK_GetProcBranchNo"/>
-        public static string GetProcBranchNo()
+        public string GetProcBranchNo()
         {
             StringBuilder sb = new(255);
             ETK_GetProcBranchNo(sb);

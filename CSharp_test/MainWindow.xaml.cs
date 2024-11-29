@@ -60,7 +60,7 @@ namespace CSharp_test
         public string UserPwd { get; set; } = string.Empty;
         public string CertPwd { get; set; } = string.Empty;
         public bool IsRemember { get; set; }
-        public IList<string> Samples { get; } = ["로그인", "로그아웃", "Sample3"];
+        public IList<string> Samples { get; } = ["로그인", "로그아웃", "업종-전체조회"];
         public string SelectedSample { get; set; } = "로그인";
         [ObservableProperty]
         public string _ResultText;
@@ -95,7 +95,11 @@ namespace CSharp_test
                         _api.Close();
                     }
                     break;
-                case "Sample3":
+                case "업종-전체조회":
+                    {
+                        var response = await _api.RequestAsync("t8424", "0"); // 0: 전체, 1: 코스피업종, 2: 코스닥업종, 3: 섹터지수, 4: 특수계열지수
+                        AppentResult(_api.LastMessage);
+                    }
                     break;
             }
         }

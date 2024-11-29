@@ -22,12 +22,12 @@
         public string rsp_msg = string.Empty;
 
         /// <summary>Block 데이터, InBlock, OutBlock, ... OutBlockN 순으로 들어옵니다.</summary>
-        public IDictionary<string, object> body = null!;
+        public Dictionary<string, object> body = [];
 
         /// <summary>resource info</summary>
         public ResInfo res = null!;
 
         /// <summary>resource info</summary>
-        public IList<long> ticks = [];
+        public List<long> ticks = [];
     }
 }

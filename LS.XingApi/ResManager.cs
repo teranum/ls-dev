@@ -1,4 +1,6 @@
-﻿namespace LS.XingApi
+﻿using System.Runtime.InteropServices;
+
+namespace LS.XingApi
 {
     /// <summary>필드 데이터</summary>
     public class FieldSpec
@@ -38,9 +40,10 @@
             this.desc = desc;
             this.type = type switch
             {
-                "INT" => VarType.INT,
-                "LONG" => VarType.INT,
-                "DOUBLE" => VarType.DOUBLE,
+                "long" => VarType.INT,
+                "int" => VarType.INT,
+                "float" => VarType.DOUBLE,
+                "double" => VarType.DOUBLE,
                 _ => VarType.STRING,
             };
 
@@ -145,7 +148,9 @@
             {
                 try
                 {
-                    FromText(File.ReadAllText(filePath));
+                    var all_bytes = File.ReadAllBytes(filePath);
+                    var ansi_striing = Marshal.PtrToStringAnsi(Marshal.UnsafeAddrOfPinnedArrayElement(all_bytes, 0), all_bytes.Length);
+                    FromText(ansi_striing);
                 }
                 catch
                 {
@@ -178,7 +183,7 @@
 
                 if (readState == RESFILE_READ_STATE.NONE)
                 {
-                    if (line.StartsWith("BEGIN FUNCTION MAP"))
+                    if (line.StartsWith("BEGIN_FUNCTION_MAP"))
                     {
                         readState = RESFILE_READ_STATE.FOUNDED_BEGIN_FUNCTION_MAP;
                     }
@@ -216,7 +221,7 @@
                 }
                 else if (readState == RESFILE_READ_STATE.FOUNDED_TR_TITLE)
                 {
-                    if (line.Equals("BEGIN DATA MAP"))
+                    if (line.Equals("BEGIN_DATA_MAP"))
                     {
                         readState = RESFILE_READ_STATE.FOUNDED_BEGIN_DATA_MAP;
                     }
@@ -276,8 +281,8 @@
                         var spec_fields = line.Split(';')[0].Split(',').Select(x => x.Trim()).ToArray();
                         if (spec_fields.Length < 5)
                             break;
-                        var field_name = spec_fields[0];
-                        var field_desc = spec_fields[2];
+                        var field_desc = spec_fields[0];
+                        var field_name = spec_fields[2];
                         var field_type = spec_fields[3];
                         var field_size = double.Parse(spec_fields[4]);
                         blockSpec!.fields.Add(new FieldSpec(field_name, field_desc, field_type, field_size));
@@ -285,7 +290,7 @@
                 }
                 else if (readState == RESFILE_READ_STATE.FOUNDED_BLOCK_END)
                 {
-                    if (line.Equals("END DATA MAP"))
+                    if (line.Equals("END_DATA_MAP"))
                     {
                         readState = RESFILE_READ_STATE.FOUNDED_END_DATA_MAP;
                     }
@@ -311,7 +316,7 @@
                 }
                 else if (readState == RESFILE_READ_STATE.FOUNDED_END_DATA_MAP)
                 {
-                    if (line.StartsWith("END FUNCTION MAP"))
+                    if (line.StartsWith("END_FUNCTION_MAP"))
                     {
                         readState = RESFILE_READ_STATE.FOUNDED_END_FUNCTION_MAP;
                     }
@@ -391,7 +396,9 @@
         {
             if (_resources.TryGetValue(tr_cd, out var info))
             {
-                return info;
+                if (info.is_correct)
+                    return info;
+                return null;
             }
             string filePath = Path.Combine(_user_folder, tr_cd + ".res");
             if (!File.Exists(filePath))
@@ -403,6 +410,16 @@
             if (!resInfo.is_correct)
                 return null;
             return resInfo;
+        }
+
+        /// <summary>TR 코드로 등록된 리소스 정보를 가져옵니다.</summary>
+        public ResInfo? GetExist(string tr_cd)
+        {
+            if (_resources.TryGetValue(tr_cd, out var info))
+            {
+                return info;
+            }
+            return null;
         }
     }
 }

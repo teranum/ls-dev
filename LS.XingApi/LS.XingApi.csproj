@@ -15,7 +15,7 @@
 		<Company>$(Authors)</Company>
 		<PackageLicenseExpression>MIT</PackageLicenseExpression>
 		<GenerateDocumentationFile>true</GenerateDocumentationFile>
-		<NoWarn>$(NoWarn);IDE0130</NoWarn>
+		<NoWarn>$(NoWarn);IDE0130;MA0016</NoWarn>
 	</PropertyGroup>
 
 </Project>
