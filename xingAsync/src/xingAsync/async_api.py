@@ -164,7 +164,6 @@ class XingApi:
                 self._async_nodes.remove(node)
                 self.last_message = f"[{code_msg[0]}] {code_msg[1]}"
                 if code_msg[0] == "0000":
-                    self.last_message = code_msg[1]
                     account_count = self._module.ETK_GetAccountListCount()
                     MAX_PATH = 255
                     buffer = ctypes.create_string_buffer(MAX_PATH)
@@ -186,7 +185,7 @@ class XingApi:
                     self._user_logined = True
                     return True
             else:
-                self.last_message = "로그인 서버전송에 실패하였습니다."
+                self.last_message = "로그인 실패."
         else:
             err_code = self._module.ETK_GetLastError()
             self.last_message = f"[{err_code}] {self._get_error_message(err_code)}"
@@ -229,7 +228,7 @@ class XingApi:
             aligned_in_block_datas = [None] * in_block_field_count
             correct_in_block_dict = {}
 
-            def get_correct_field_value(field: FieldSpec, value: object) -> str:
+            def get_correct_field_value(field: FieldSpec, value: object):
                 # return value, error
                 size = field.size
                 if size == 0: return value, ''
@@ -624,9 +623,12 @@ class XingApi:
                             break
 
                 case XING_MSG.XM_LOGOUT:
+                    self._user_logined = False
                     self.on_message.emit_signal('LOGOUT')
 
                 case XING_MSG.XM_DISCONNECT:
+                    self._user_logined = False
+                    self._server_connected = False
                     self.on_message.emit_signal('DISCONNECT')
 
                 case XING_MSG.XM_RECEIVE_DATA:
