@@ -701,8 +701,6 @@ namespace LS.XingApi
                             {
                                 foreach (var out_block in res_info.out_blocks)
                                 {
-                                    if (nDataLength <= 0)
-                                        break;
                                     var nFrameCount = 0;
                                     if (out_block.is_occurs)
                                     {
@@ -720,6 +718,9 @@ namespace LS.XingApi
                                     }
                                     var rows = nFrameCount;
                                     var cols = out_block.fields.Count;
+                                    if (nDataLength < out_block.record_size * rows)
+                                        // errMsg = "수신 데이터 길이 오류."
+                                        break;
                                     var datas = new List<Dictionary<string, object>>(rows);
                                     for (int i = 0; i < rows; i++)
                                     {
