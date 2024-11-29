@@ -65,6 +65,9 @@
                 Command="{Binding ClearCommand}"
                 Content="지우기" />
         </StackPanel>
-        <TextBox Grid.Row="2" Text="{Binding ResultText}" />
+        <TextBox
+            Grid.Row="2"
+            Text="{Binding ResultText}"
+            VerticalScrollBarVisibility="Auto" />
     </Grid>
 </Window>
