@@ -37,6 +37,9 @@ class RECV_FLAG:
     MESSAGE_DATA: int = 2
     SYSTEM_ERROR_DATA: int = 3
     RELEASE_DATA: int = 4
+    ###
+    TIME_OUT: int = 7,
+    LINK_DAT: int = 10,
 
 class RECV_PACKET(ctypes.Structure):
     _pack_ = 1
