@@ -6,5 +6,7 @@
         MESSAGE_DATA = 2,
         SYSTEM_ERROR_DATA = 3,
         RELEASE_DATA = 4,
+        //
+        LINK_DATA = 10,
     }
 }

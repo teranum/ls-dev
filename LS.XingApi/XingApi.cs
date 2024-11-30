@@ -1,9 +1,6 @@
 ﻿using LS.XingApi.Native;
-using Microsoft.Win32;
 using System.Collections;
-using System.ComponentModel;
 using System.Diagnostics;
-using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text;
 using LPARAM = nint;
@@ -14,62 +11,14 @@ namespace LS.XingApi
     /// <summary>API</summary>
     public partial class XingApi
     {
-        [DllImport("kernel32.dll")] private static extern IntPtr LoadLibrary(string dllToLoad);
-        [DllImport("kernel32.dll")] private static extern IntPtr GetProcAddress(IntPtr hModule, string procedureName);
-        private const string XING_DLL = "xingAPI.dll";
-        private const string XING64_DLL = "xingAPI64.dll";
-        private delegate bool XING64_Init_Handler(string szFolder);
         private const string REAL_DOMAIN = "api.ls-sec.co.kr";
         private const string SIMUL_DOMAIN = "demo.ls-sec.co.kr";
+        private const int WM_XING = 0x0400;
 
-        class WndForm : Form
-        {
-            public Action<IntPtr, uint, IntPtr, IntPtr>? WndProcHandler;
-            protected override void WndProc(ref Message m)
-            {
-                base.WndProc(ref m);
-                WndProcHandler?.Invoke(m.HWnd, (uint)m.Msg, m.WParam, m.LParam);
-            }
-        }
-
-        class AsyncNode(int ident_id, Action<WPARAM, LPARAM> callback)
-        {
-            public readonly int ident_id = ident_id;
-            public Action<WPARAM, LPARAM> callback = callback;
-
-            private readonly ManualResetEvent _async_wait = new(initialState: false);
-
-            public bool _async_evented = false;
-            public string _async_code = string.Empty;
-            public string _async_msg = string.Empty;
-            public int _async_result = 0;
-
-            public bool Set() => _async_wait.Set();
-            public Task<bool> Wait(int millisecondsTimeout = -1)
-            {
-                return Task.Run(() =>
-                {
-                    if (!_async_wait.WaitOne(millisecondsTimeout))
-                    {
-                        if (!_async_evented)
-                            _async_result = -902;
-                        return false;
-                    }
-                    return true;
-                });
-            }
-        }
-
-        readonly List<AsyncNode> _async_nodes = [];
-
-        private Form _win32Window;
-        private const int WM_USER = 0x0400;
-        private const int AsyncTimeOut = 10000;
-
-        private ResManager _resManager;
-        private IXingApi _module;
-        private string _xing_folder;
-        private bool _server_connected;
+        private readonly Form _win32Window;
+        private readonly ResManager _resManager;
+        private List<AccountInfo> _accountInfos { get; } = [];
+        private readonly List<AsyncNode> _async_nodes = [];
 
         /// <summary>API자원관리자</summary>
         public ResManager ResourceManager => _resManager;
@@ -80,84 +29,33 @@ namespace LS.XingApi
         /// <inheritdoc cref="RealtimeEventArgs"/>
         public event EventHandler<RealtimeEventArgs>? OnRealtimeEvent;
 
-        /// <summary>
-        /// XingAPI 폴더
-        /// </summary>
-        public string XingFolder => _xing_folder;
+        /// <summary>Api설치 여부</summary>
+        public bool ModuleLoaded { get; private set; }
 
-        /// <summary>
-        /// 모듈이 로딩 된 경우 true
-        /// </summary>
-        public bool ModuleLoaded => _module.IsLoaded;
+        /// <summary>연결 여부</summary>
+        public bool Logined { get; private set; }
 
         /// <summary>모의투자 여부</summary>
         public bool IsSimulation { get; private set; }
 
-        /// <summary>연결 여부</summary>
-        public bool Connected { get; private set; }
-
-        /// <summary>윈도우 핸들</summary>
-        public nint Handle => _win32Window.Handle;
-
-        /// <summary>로그인 아이디</summary>
-        public string UserID { get; private set; } = string.Empty;
+        /// <summary>계좌정보 리스트. (로그인 시 자동 등록 됩니다)</summary>
+        public IReadOnlyList<AccountInfo> AccountInfos => _accountInfos;
 
         /// <summary>
         /// 마지막 메시지
         /// </summary>
         public string LastMessage { get; private set; } = string.Empty;
 
+        /// <summary>윈도우 핸들</summary>
+        public nint Handle => _win32Window.Handle;
+
+
         /// <summary>API객체 생성</summary>
         public XingApi(string apiFolder = "")
         {
-            bool is_64bit = Environment.Is64BitProcess;
-            if (!Directory.Exists(apiFolder))
-            {
-                var regKey = is_64bit
-                    ? Registry.ClassesRoot.OpenSubKey("WOW6432Node\\CLSID\\{7FEF321C-6BFD-413C-AA80-541A275434A1}\\InprocServer32")
-                    : Registry.ClassesRoot.OpenSubKey("CLSID\\{7FEF321C-6BFD-413C-AA80-541A275434A1}\\InprocServer32");
-                if (regKey is not null)
-                {
-                    if (regKey.GetValue("") is string defaultValue)
-                    {
-                        apiFolder = Path.GetDirectoryName(defaultValue) ?? string.Empty;
-                    }
-                    regKey.Close();
-                }
-            }
-
-            nint handle;
-            var exe_folder = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location)!;
-            if (is_64bit)
-            {
-                var pack_dll_path = Path.Combine(exe_folder, XING64_DLL);
-                if (File.Exists(pack_dll_path))
-                    handle = LoadLibrary(pack_dll_path);
-                else
-                    handle = LoadLibrary(Path.Combine(apiFolder, XING64_DLL));
-
-                if (handle != 0)
-                {
-                    var XING64_Init_Handle = GetProcAddress(handle, "XING64_Init");
-                    if (XING64_Init_Handle != IntPtr.Zero)
-                    {
-                        var XING64_Init = Marshal.GetDelegateForFunctionPointer<XING64_Init_Handler>(XING64_Init_Handle);
-                        if (!XING64_Init(apiFolder))
-                        {
-                            handle = 0;
-                        }
-                    }
-                }
-            }
-            else
-                handle = LoadLibrary(Path.Combine(apiFolder, XING_DLL));
-
-            _resManager = new ResManager(exe_folder, apiFolder);
-
-            _module = new IXingApi(handle);
-            _xing_folder = apiFolder;
-
-            // 새로운 창을 생성
+            XingNative.Init(apiFolder);
+            ModuleLoaded = XingNative.IsLoaded;
+            _resManager = new ResManager(XingNative.ApiFolder);
             _win32Window = new WndForm()
             {
                 FormBorderStyle = FormBorderStyle.FixedToolWindow,
@@ -170,34 +68,6 @@ namespace LS.XingApi
         }
 
         /// <summary>
-        /// 에러 메시지 반환
-        /// </summary>
-        /// <param name="nErrCode">에러 코드</param>
-        /// <returns></returns>
-        public string GetErrorMessage(int nErrCode)
-        {
-            switch (nErrCode)
-            {
-                case -900:
-                    return "DLL 모듈 로드 실패.";
-                case -901:
-                    return "이미 작동중 입니다.";
-                case -902:
-                    return "타임아웃.";
-                case -903:
-                    return "SYSTEM ERROR.";
-                case -904:
-                    return "수신데이터가 없습니다.";
-                case -905:
-                    return "자원정보가 없습니다.";
-
-                default:
-                    break;
-            }
-            return _module.GetErrorMessage(nErrCode);
-        }
-
-        /// <summary>
         /// 비동기 연결 요청
         /// </summary>
         /// <param name="userId">유저 아이디</param>
@@ -207,7 +77,7 @@ namespace LS.XingApi
         /// <remarks>공인인증 패스워드 없는 경우, 모의서버로 로그인</remarks>
         public async Task<bool> ConnectAsync(string userId, string password, string certPassword = "")
         {
-            if (Connected)
+            if (Logined)
             {
                 LastMessage = "Already connected";
                 return true;
@@ -223,11 +93,21 @@ namespace LS.XingApi
             _accountInfos.Clear();
 
             IsSimulation = certPassword.Length == 0;
-            _server_connected = _module.ETK_Connect(Handle, IsSimulation ? SIMUL_DOMAIN : REAL_DOMAIN, 20001, WM_USER, -1, -1);
 
-            if (_server_connected)
+            if (!XingNative.ETK_IsConnected())
             {
-                var ret = _module.ETK_Login(Handle, userId, password, certPassword, 0, bShowCertErrDlg: false);
+                bool ok = XingNative.ETK_Connect(Handle, IsSimulation ? SIMUL_DOMAIN : REAL_DOMAIN, 20001, WM_XING, -1, -1);
+                if (!ok)
+                {
+                    int nErrCode = GetLastError();
+                    LastMessage = $"[{nErrCode}] {GetErrorMessage(nErrCode)}";
+                    return false;
+                }
+            }
+
+            if (XingNative.ETK_IsConnected())
+            {
+                var ret = XingNative.ETK_Login(Handle, userId, password, certPassword, 0, bShowCertErrDlg: false);
                 if (ret)
                 {
                     var code_msg = (string.Empty, string.Empty);
@@ -242,17 +122,16 @@ namespace LS.XingApi
                     LastMessage = $"[{code_msg.Item1}] {code_msg.Item2}";
                     if (code_msg.Item1.Equals("0000"))
                     {
-                        var account_count = _module.ETK_GetAccountListCount();
+                        var account_count = XingNative.ETK_GetAccountListCount();
                         for (var i = 0; i < account_count; i++)
                         {
-                            var Number = _module.GetAccountList(i);
-                            var Name = _module.GetAccountName(Number);
-                            var DetailName = _module.GetAcctDetailName(Number);
-                            var NickName = _module.GetAcctNickname(Number);
+                            var Number = XingNative.GetAccountList(i);
+                            var Name = XingNative.GetAccountName(Number);
+                            var DetailName = XingNative.GetAcctDetailName(Number);
+                            var NickName = XingNative.GetAcctNickname(Number);
                             _accountInfos.Add(new AccountInfo(Number, Name, DetailName, NickName));
                         }
-                        Connected = true;
-                        UserID = userId;
+                        Logined = true;
                         return true;
                     }
                 }
@@ -276,30 +155,57 @@ namespace LS.XingApi
         {
             if (!ModuleLoaded)
                 return;
-            if (Connected)
+            if (Logined)
             {
-                _module.ETK_Logout(Handle);
-                Connected = false;
+                XingNative.ETK_Logout(Handle);
+                Logined = false;
             }
-            if (_server_connected)
+            if (XingNative.ETK_IsConnected())
             {
-                _module.ETK_Disconnect();
-                _server_connected = false;
+                XingNative.ETK_Disconnect();
             }
         }
 
-        private int GetLastError() => _module.ETK_GetLastError();
-        private List<AccountInfo> _accountInfos { get; } = [];
+        /// <summary>
+        /// 마지막 오류코드 반환
+        /// </summary>
+        /// <returns></returns>
+        public static int GetLastError() => XingNative.ETK_GetLastError();
+
+        /// <summary>
+        /// 오류코드에 대한 메시지 반환
+        /// </summary>
+        /// <param name="nErrCode"></param>
+        /// <returns></returns>
+        public static string GetErrorMessage(int nErrCode)
+        {
+            switch (nErrCode)
+            {
+                case -900:
+                    return "DLL 모듈 로드 실패.";
+                case -901:
+                    return "이미 작동중 입니다.";
+                case -902:
+                    return "타임아웃.";
+                case -903:
+                    return "SYSTEM ERROR.";
+                case -904:
+                    return "수신데이터가 없습니다.";
+                case -905:
+                    return "자원정보가 없습니다.";
+
+                default:
+                    break;
+            }
+            return XingNative.GetErrorMessage(nErrCode);
+        }
 
         private static string PtrToStringAnsi(IntPtr ptr) => Marshal.PtrToStringAnsi(ptr)?.TrimEnd('\0').Trim() ?? string.Empty;
         private static string PtrToStringAnsi(IntPtr ptr, int length) => Marshal.PtrToStringAnsi(ptr, length).TrimEnd('\0').Trim();
-        static string ByteToString(byte[] bytes)
+        private static string ByteToString(byte[] bytes)
         {
             return PtrToStringAnsi(Marshal.UnsafeAddrOfPinnedArrayElement(bytes, 0), bytes.Length);
         }
-
-        /// <summary>계좌정보 리스트. (로그인 시 자동 등록 됩니다)</summary>
-        public IReadOnlyList<AccountInfo> AccountInfos => _accountInfos;
 
         /// <summary>
         /// TR의 초당 전송 가능 횟수, Base 시간(초단위), TR의 10분당 제한 건수, 10분내 요청한 해당 TR의 총 횟수를 반환합니다.
@@ -308,10 +214,10 @@ namespace LS.XingApi
         /// <returns></returns>
         public RequestCount GetRequestCount(string tr_cd) => new()
         {
-            PerSec = _module.ETK_GetTRCountPerSec(tr_cd),
-            BaseSec = _module.ETK_GetTRCountBaseSec(tr_cd),
-            Limit = _module.ETK_GetTRCountLimit(tr_cd),
-            Requests = _module.ETK_GetTRCountRequest(tr_cd),
+            PerSec = XingNative.ETK_GetTRCountPerSec(tr_cd),
+            BaseSec = XingNative.ETK_GetTRCountBaseSec(tr_cd),
+            Limit = XingNative.ETK_GetTRCountLimit(tr_cd),
+            Requests = XingNative.ETK_GetTRCountRequest(tr_cd),
         };
 
         /// <summary>
@@ -336,40 +242,12 @@ namespace LS.XingApi
         public Task<ResponseTrData?> RequestAsync(string tr_cd, string in_datas, bool cont_yn = false, string cont_key = "")
             => Inter_RequestAsync(tr_cd, in_datas.Split([',']).ToList(), cont_yn, cont_key);
 
-        ///// <summary>
-        ///// 비동기 TR 요청
-        ///// </summary>
-        ///// <param name="tr_cd">증권 거래코드</param>
-        ///// <param name="in_datas">입력 바이너리 데이터</param>
-        ///// <param name="cont_yn">연속여부</param>
-        ///// <param name="cont_key">연속일 경우 그전에 내려온 연속키 값 올림</param>
-        ///// <returns>응답데이터, null인경우 오류, 오류 메시지는 LastMessage 참고</returns>
-        //public async Task<ResponseTrData?> RequestAsync(string tr_cd, IList<object> in_datas, bool cont_yn = false, string cont_key = "")
-        //    => await Inter_RequestAsync(tr_cd, in_datas, cont_yn, cont_key);
-
-        ///// <summary>
-        ///// 비동기 TR 요청
-        ///// </summary>
-        ///// <param name="tr_cd">증권 거래코드</param>
-        ///// <param name="in_datas">입력 바이너리 데이터</param>
-        ///// <param name="cont_yn">연속여부</param>
-        ///// <param name="cont_key">연속일 경우 그전에 내려온 연속키 값 올림</param>
-        ///// <returns>응답데이터, null인경우 오류, 오류 메시지는 LastMessage 참고</returns>
-        //public Task<ResponseTrData?> RequestAsync(string tr_cd, IDictionary<string, object> in_datas, bool cont_yn = false, string cont_key = "")
-        //    => Inter_RequestAsync(tr_cd, in_datas, cont_yn, cont_key);
-
         private async Task<ResponseTrData?> Inter_RequestAsync(string tr_cd, object in_datas, bool cont_yn = false, string cont_key = "")
         {
             var res_info = _resManager.GetResInfo(tr_cd);
             if (res_info is null)
             {
                 LastMessage = "TR 정보를 찾을 수 없습니다.";
-                return null;
-            }
-
-            if (!Connected)
-            {
-                LastMessage = "Not connected";
                 return null;
             }
 
@@ -583,10 +461,10 @@ namespace LS.XingApi
             int nRqID;
             if (res_info.tr_cd.Equals("t1857") || tr_cd.Equals("ChartIndex") || tr_cd.Equals("ChartExcel"))
             {
-                nRqID = _module.ETK_RequestService(Handle, tr_cd, indata_line.ToString());
+                nRqID = XingNative.ETK_RequestService(Handle, tr_cd, indata_line.ToString());
             }
             else
-                nRqID = _module.ETK_Request(Handle, tr_cd, indata_line.ToString(), indata_line.Length, cont_yn, cont_key, AsyncTimeOut);
+                nRqID = XingNative.ETK_Request(Handle, tr_cd, indata_line.ToString(), indata_line.Length, cont_yn, cont_key, 10);
             if (nRqID < 0)
             {
                 LastMessage = $"[{nRqID}]: {GetErrorMessage(nRqID)}";
@@ -662,7 +540,7 @@ namespace LS.XingApi
                                                 var target_size = rec_count * out_block.record_size;
                                                 var buffer = new byte[target_size];
                                                 var buffer_adr = Marshal.UnsafeAddrOfPinnedArrayElement(buffer, 0);
-                                                nDataLength = _module.ETK_Decompress(lpData, buffer_adr, nDataLength);
+                                                nDataLength = XingNative.ETK_Decompress(lpData, buffer_adr, nDataLength);
                                                 lpData = buffer_adr;
                                             }
                                         }
@@ -758,7 +636,8 @@ namespace LS.XingApi
 
             }
         }
-        object ConvFieldData(FieldSpec field_spec, string value)
+
+        private static object ConvFieldData(FieldSpec field_spec, string value)
         {
             if (field_spec.type == FieldSpec.VarType.STRING)
                 return value;
@@ -778,7 +657,7 @@ namespace LS.XingApi
             {
                 if (double.TryParse(value, out var d))
                 {
-                    if (!value.Contains('.'))
+                    if (field_spec.dot_value > 0 && !value.Contains('.'))
                         d = d / field_spec.dot_value;
                     return d;
                 }
@@ -796,15 +675,9 @@ namespace LS.XingApi
         /// <returns>true: 요청성공, false: 요청실패</returns>
         public bool Realtime(string tr_cd, string tr_key, bool advise)
         {
-            if (!Connected)
-            {
-                LastMessage = "Not connected";
-                return false;
-            }
-
             if (!advise && tr_cd.Length == 0)
             {
-                if (_module.ETK_UnadviseWindow(Handle))
+                if (XingNative.ETK_UnadviseWindow(Handle))
                 {
                     LastMessage = "모든 실시간 해제 성공.";
                     return true;
@@ -865,11 +738,11 @@ namespace LS.XingApi
             bool bRet;
             if (advise)
             {
-                bRet = _module.ETK_AdviseRealData(Handle, tr_cd, indata_line.ToString(), indata_line.Length);
+                bRet = XingNative.ETK_AdviseRealData(Handle, tr_cd, indata_line.ToString(), indata_line.Length);
             }
             else
             {
-                bRet = _module.ETK_UnadviseRealData(Handle, tr_cd, indata_line.ToString(), indata_line.Length);
+                bRet = XingNative.ETK_UnadviseRealData(Handle, tr_cd, indata_line.ToString(), indata_line.Length);
             }
             LastMessage = bRet ? "Realtime 요청성공" : "Realtime 요청실패";
             return bRet;
@@ -878,26 +751,25 @@ namespace LS.XingApi
         /// <summary>
         /// 부가 서비스용 TR를 해제합니다.
         /// </summary>
-        public int RemoveService(string szCode, string szData) => _module.ETK_RemoveService(Handle, szCode, szData);
+        public int RemoveService(string szCode, string szData) => XingNative.ETK_RemoveService(Handle, szCode, szData);
 
         private void WndProc(IntPtr hwnd, uint msg, IntPtr wParam, IntPtr lParam)
         {
             // Handle messages...
 
-            XM xM = (XM)(msg - WM_USER);
+            XM xM = (XM)(msg - WM_XING);
 
             switch (xM)
             {
                 case XM.XM_LOGOUT:
                     {
-                        Connected = false;
+                        Logined = false;
                         OnMessageEvent?.Invoke(this, new("LOGOUT"));
                     }
                     break;
                 case XM.XM_DISCONNECT:
                     {
-                        Connected = false;
-                        _server_connected = false;
+                        Logined = false;
                         OnMessageEvent?.Invoke(this, new("DISCONNECT"));
                     }
                     break;
@@ -942,10 +814,10 @@ namespace LS.XingApi
                                         async_node.Set();
                                     }
 
-                                    _module.ETK_ReleaseMessageData(lParam);
+                                    XingNative.ETK_ReleaseMessageData(lParam);
                                     if (receiveFlag == RECEIVE_FLAGS.SYSTEM_ERROR_DATA)
                                     {
-                                        _module.ETK_ReleaseRequestData(nRqID);
+                                        XingNative.ETK_ReleaseRequestData(nRqID);
                                     }
                                 }
                                 break;
@@ -959,7 +831,7 @@ namespace LS.XingApi
                                         async_node.callback(wParam, lParam);
                                         async_node.Set();
                                     }
-                                    _module.ETK_ReleaseRequestData(nRqID);
+                                    XingNative.ETK_ReleaseRequestData(nRqID);
                                 }
                                 break;
                             default:
@@ -980,7 +852,7 @@ namespace LS.XingApi
                             async_node._async_result = -902;
                             async_node.Set();
                         }
-                        _module.ETK_ReleaseRequestData(nRqID);
+                        XingNative.ETK_ReleaseRequestData(nRqID);
                     }
                     break;
                 case XM.XM_RECEIVE_LINK_DATA:
@@ -989,7 +861,8 @@ namespace LS.XingApi
                         // WPARAM: LINK_DATA
                         // LPARAM: LINKDATRRA_RECV_MSG 구조체 데이터
                         //var data = new LINKDATA_RECV_MSG_CLASS(lParam);
-                        _module.ETK_ReleaseMessageData(lParam);
+                        if (wParam == (nint)RECEIVE_FLAGS.LINK_DATA)
+                            XingNative.ETK_ReleaseMessageData(lParam);
                     }
                     break;
                 case XM.XM_RECEIVE_REAL_DATA:
@@ -1052,17 +925,45 @@ namespace LS.XingApi
             }
 
             return;
-
         }
 
-        /// <summary>
-        /// 모드 설정
-        /// </summary>
-        /// <param name="mode"></param>
-        /// <param name="value"></param>
-        public void SetMode(string mode, string value)
+        class WndForm : Form
         {
-            _module.ETK_SetMode(mode, value);
+            public Action<IntPtr, uint, IntPtr, IntPtr>? WndProcHandler;
+            protected override void WndProc(ref Message m)
+            {
+                base.WndProc(ref m);
+                WndProcHandler?.Invoke(m.HWnd, (uint)m.Msg, m.WParam, m.LParam);
+            }
         }
+
+        class AsyncNode(int ident_id, Action<WPARAM, LPARAM> callback)
+        {
+            public readonly int ident_id = ident_id;
+            public Action<WPARAM, LPARAM> callback = callback;
+
+            private readonly ManualResetEvent _async_wait = new(initialState: false);
+
+            public bool _async_evented = false;
+            public string _async_code = string.Empty;
+            public string _async_msg = string.Empty;
+            public int _async_result = 0;
+
+            public bool Set() => _async_wait.Set();
+            public Task<bool> Wait(int millisecondsTimeout = -1)
+            {
+                return Task.Run(() =>
+                {
+                    if (!_async_wait.WaitOne(millisecondsTimeout))
+                    {
+                        if (!_async_evented)
+                            _async_result = -902;
+                        return false;
+                    }
+                    return true;
+                });
+            }
+        }
+        private delegate bool XING64_Init_Handler(string szFolder);
     }
 }

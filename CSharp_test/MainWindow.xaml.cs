@@ -13,7 +13,7 @@ namespace CSharp_test
     [ObservableObject]
     public partial class MainWindow : Window
     {
-        XingApi _api = new();
+        private readonly XingApi _api = new();
         public MainWindow()
         {
             InitializeComponent();
@@ -62,7 +62,11 @@ namespace CSharp_test
         public string UserPwd { get; set; } = string.Empty;
         public string CertPwd { get; set; } = string.Empty;
         public bool IsRemember { get; set; }
-        public IList<string> Samples { get; } = ["로그인", "로그아웃", "업종-전체조회", "업종-차트조회", "주식-차트조회"];
+        public IList<string> Samples { get; } =
+            [
+            "로그인", "로그아웃", "업종-전체조회", "업종-차트조회",
+            "주식-차트조회", "주식-현재가", "2-주식-현재가",
+            ];
         public string SelectedSample { get; set; } = "로그인";
         [ObservableProperty]
         public string _ResultText;
@@ -84,16 +88,22 @@ namespace CSharp_test
         {
             if (IsCheckClear)
                 ResultText = string.Empty;
+            if (SelectedSample.Equals("로그인"))
+            {
+                AppendResult("로그인 요청중...");
+                await _api.ConnectAsync(UserId, UserPwd, CertPwd);
+                AppendResult(_api.LastMessage);
+                return;
+            }
+
+            if (!_api.Logined)
+            {
+                AppendResult("로그인이 필요합니다.");
+                return;
+            }
+
             switch (SelectedSample)
             {
-                case "로그인":
-                    {
-
-                        AppendResult("로그인 요청중...");
-                        await _api.ConnectAsync(UserId, UserPwd, CertPwd);
-                        AppendResult(_api.LastMessage);
-                    }
-                    break;
 
                 case "로그아웃":
                     {
@@ -153,6 +163,33 @@ namespace CSharp_test
                         }
                     }
                     break;
+
+                case "주식-현재가":
+                    {
+                        var inputs = "005930";
+                        var tr_cd = "t1102";
+                        var response = await _api.RequestAsync(tr_cd, inputs);
+                        AppendResult($"{tr_cd}: {_api.LastMessage}");
+                        if (response is not null)
+                        {
+                            AppendResult(response);
+                        }
+                    }
+                    break;
+
+                case "2-주식-현재가":
+                    {
+                        var other_api = new XingApi();
+                        var inputs = "005930";
+                        var tr_cd = "t1102";
+                        var response = await other_api.RequestAsync(tr_cd, inputs);
+                        AppendResult($"{tr_cd}: {other_api.LastMessage}");
+                        if (response is not null)
+                        {
+                            AppendResult(response);
+                        }
+                    }
+                    break;
             }
         }
 
@@ -191,7 +228,7 @@ namespace CSharp_test
                         sb.AppendLine($"{key}: ({dict.Count})");
                         sb.AppendLine(dict.ToJson());
                     }
-                    else 
+                    else
                         sb.AppendLine(value.ToString());
                 }
             }

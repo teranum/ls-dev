@@ -1,4 +1,5 @@
-﻿using System.Runtime.InteropServices;
+﻿using System.Reflection;
+using System.Runtime.InteropServices;
 
 namespace LS.XingApi
 {
@@ -344,18 +345,12 @@ namespace LS.XingApi
     }
 
     /// <summary>리소스 매니저</summary>
-    public class ResManager
+    /// <remarks>생성자</remarks>
+    public class ResManager(string xingFolder)
     {
-        private string _user_folder;
-        private string _xing_folder;
-        private IDictionary<string, ResInfo> _resources = new Dictionary<string, ResInfo>();
-
-        /// <summary>생성자</summary>
-        public ResManager(string userFolder, string xingFolder)
-        {
-            _user_folder = userFolder;
-            _xing_folder = xingFolder;
-        }
+        private readonly string _user_folder = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location)!;
+        private readonly string _xing_folder = xingFolder;
+        private readonly static Dictionary<string, ResInfo> _resources = [];
 
         /// <summary>텍스트에서 리소스 정보를 설정합니다.</summary>
         public ResInfo? SetFromText(string text)
