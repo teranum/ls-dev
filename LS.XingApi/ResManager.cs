@@ -121,7 +121,7 @@ namespace LS.XingApi
         /// <summary>블록여부</summary>
         public bool is_block;
         /// <summary>압축가능여부</summary>
-        public bool compressable;
+        public bool is_comp_yn;
         /// <summary>헤드타입</summary>
         public string headtype;
 
@@ -142,7 +142,7 @@ namespace LS.XingApi
             is_func = false;
             is_attr = false;
             is_block = false;
-            compressable = false;
+            is_comp_yn = false;
             headtype = string.Empty;
 
             if (!string.IsNullOrEmpty(filePath))
@@ -164,7 +164,7 @@ namespace LS.XingApi
         {
             res_text = text;
             is_correct = false;
-            is_func = is_attr = is_block = compressable = false;
+            is_func = is_attr = is_block = is_comp_yn = false;
             headtype = string.Empty;
             in_blocks.Clear();
             out_blocks.Clear();
@@ -335,7 +335,7 @@ namespace LS.XingApi
                     {
                         if (field.name.Equals("comp_yn"))
                         {
-                            compressable = true;
+                            is_comp_yn = true;
                             break;
                         }
                     }

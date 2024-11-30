@@ -488,7 +488,7 @@ namespace LS.XingApi
                                         response.body[out_block.name] = PtrToStringAnsi(lpData, nDataLength);
                                     else
                                     {
-                                        if (res_info.compressable
+                                        if (res_info.is_comp_yn
                                             && out_block.is_occurs
                                             && response.body.TryGetValue(res_info.in_blocks[0].name, out var in_block_base)
                                             && in_block_base is IDictionary dict
