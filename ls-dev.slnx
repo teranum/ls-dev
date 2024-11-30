@@ -17,7 +17,7 @@
   </Project>
   <Project Path="CSharp_test/CSharp_test.csproj" Id="75fb7178-9859-4be9-92c9-0d788f28a494">
     <BuildDependency Project="LS.XingApi/LS.XingApi.csproj" />
-    <Platform Solution="Debug|Any CPU" Project="x86" />
+    <Platform Solution="*|Any CPU" Project="x86" />
     <Platform Solution="Debug|x64" Project="x64" />
     <Platform Solution="Debug|x86" Project="x86" />
   </Project>
