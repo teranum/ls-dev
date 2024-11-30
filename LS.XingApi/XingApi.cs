@@ -96,15 +96,7 @@ namespace LS.XingApi
             _is_Simulation = certPassword.Length == 0;
 
             if (!XingNative.ETK_IsConnected())
-            {
-                bool ok = XingNative.ETK_Connect(Handle, IsSimulation ? SIMUL_DOMAIN : REAL_DOMAIN, 20001, WM_XING, -1, -1);
-                if (!ok)
-                {
-                    int nErrCode = XingNative.ETK_GetLastError();
-                    LastMessage = $"[{nErrCode}] {XingNative.GetErrorMessage(nErrCode)}";
-                    return false;
-                }
-            }
+                XingNative.ETK_Connect(Handle, IsSimulation ? SIMUL_DOMAIN : REAL_DOMAIN, 20001, WM_XING, -1, -1);
 
             if (XingNative.ETK_IsConnected())
             {

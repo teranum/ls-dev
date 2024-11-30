@@ -11,7 +11,7 @@
     <OutputPath>.</OutputPath>
     <Name>xingAsync</Name>
     <RootNamespace>xingAsync</RootNamespace>
-    <InterpreterId>MSBuild|env64|$(MSBuildProjectFullPath)</InterpreterId>
+    <InterpreterId>MSBuild|env32|$(MSBuildProjectFullPath)</InterpreterId>
     <IsWindowsApplication>False</IsWindowsApplication>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">

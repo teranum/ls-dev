@@ -8,42 +8,50 @@ class XingApi:
     simul_domain = b"demo.ls-sec.co.kr"
     XM_MSG_BASE: int = 1024
     enc = 'euc-kr'
+    default_timeout = 10
+
+    _module = None
+    _user_logined = False
+    _is_simulation = False
+    _accounts: list[AccountInfo] = []
+    _xing_folder = str()
 
     def __init__(self, xing_folder: str = ""):
         """ XingApi class """
-        is_64bit = ctypes.sizeof(ctypes.c_void_p) == 8
-        if not os.path.exists(xing_folder):
-            import winreg as wrg
+        if not self._module:
+            is_64bit = ctypes.sizeof(ctypes.c_void_p) == 8
+            if not os.path.exists(xing_folder):
+                import winreg as wrg
+                try:
+                    if is_64bit:
+                        regKey = wrg.OpenKeyEx(wrg.HKEY_CLASSES_ROOT, r"WOW6432Node\\CLSID\\{7FEF321C-6BFD-413C-AA80-541A275434A1}\\InprocServer32")
+                    else:
+                        regKey = wrg.OpenKeyEx(wrg.HKEY_CLASSES_ROOT, r"CLSID\\{7FEF321C-6BFD-413C-AA80-541A275434A1}\\InprocServer32")
+                    def_value = wrg.QueryValueEx(regKey, None)
+                    wrg.CloseKey(regKey)
+                    if len(def_value[0]) > 0:
+                        xing_folder = os.path.dirname(def_value[0])
+                except:
+                    pass
+
             try:
                 if is_64bit:
-                    regKey = wrg.OpenKeyEx(wrg.HKEY_CLASSES_ROOT, r"WOW6432Node\\CLSID\\{7FEF321C-6BFD-413C-AA80-541A275434A1}\\InprocServer32")
+                    pack_dll_path = os.path.dirname(os.path.abspath(__file__)) + "\\native" + '\\xingAPI64.dll'
+                    if os.path.exists(pack_dll_path):
+                        XingApi._module = ctypes.WinDLL(pack_dll_path)
+                    else:
+                        XingApi._module = ctypes.WinDLL(os.path.join(xing_folder, "xingAPI64.dll"))
+                    self._module.ETK_ReleaseRequestData.argtypes = [ctypes.c_int] # not used
+                    self._module.ETK_ReleaseMessageData.argtypes = [ctypes.c_voidp] # not used
+                    self._module.ETK_Decompress.argtypes = [ctypes.c_voidp, ctypes.c_voidp, ctypes.c_int] # for decompress
+                    if not self._module.XING64_Init(xing_folder.encode()):
+                        self._module = None
                 else:
-                    regKey = wrg.OpenKeyEx(wrg.HKEY_CLASSES_ROOT, r"CLSID\\{7FEF321C-6BFD-413C-AA80-541A275434A1}\\InprocServer32")
-                def_value = wrg.QueryValueEx(regKey, None)
-                wrg.CloseKey(regKey)
-                if len(def_value[0]) > 0:
-                    xing_folder = os.path.dirname(def_value[0])
+                    XingApi._module = ctypes.WinDLL(os.path.join(xing_folder, "xingAPI.dll"))
             except:
-                pass
+                XingApi._module = None
 
-        try:
-            if is_64bit:
-                pack_dll_path = os.path.dirname(os.path.abspath(__file__)) + "\\native" + '\\xingAPI64.dll'
-                if os.path.exists(pack_dll_path):
-                    self._module = ctypes.WinDLL(pack_dll_path)
-                else:
-                    self._module = ctypes.WinDLL(os.path.join(xing_folder, "xingAPI64.dll"))
-                self._module.ETK_ReleaseRequestData.argtypes = [ctypes.c_int] # not used
-                self._module.ETK_ReleaseMessageData.argtypes = [ctypes.c_voidp] # not used
-                self._module.ETK_Decompress.argtypes = [ctypes.c_voidp, ctypes.c_voidp, ctypes.c_int] # for decompress
-                if not self._module.XING64_Init(xing_folder.encode()):
-                    self._module = None
-            else:
-                self._module = ctypes.WinDLL(os.path.join(xing_folder, "xingAPI.dll"))
-        except:
-            self._module = None
-
-        self.xing_folder = xing_folder
+            XingApi._xing_folder = xing_folder
 
         class_name = 'XingApiClientClass-' + str(time.perf_counter_ns())
         wc = win32gui.WNDCLASS()
@@ -51,30 +59,13 @@ class XingApi:
         wc.lpszClassName = class_name
         wc.hInstance = win32api.GetModuleHandle(None)
         class_atom = win32gui.RegisterClass(wc)
+
         self._hwnd = win32gui.CreateWindow(class_atom, class_name, 0, 100, 100, 100, 100, 0, 0, wc.hInstance, None)
-
-        self._default_timeout = 10
-        self._server_connected = False
-        self._user_logined = False
-        self._is_simulation = False
         self._async_nodes: list[XingApi._asyncNode] = []
-        self._accounts: list[AccountInfo] = []
-        self._res_manager = ResourceManager(self.xing_folder)
-
-        self.last_message = str()
-        """ last message from XingAPI """
-
-        self.on_message = self._xingSignal()
-        """
-        메시지 핸들러 (LOGOUT, DISCONNECT ...)
-        on_message(msg: str)
-        """
-
-        self.on_realtime = self._xingSignal()
-        """
-        실시간 이벤트 핸들러
-        on_realtime(tr_cd: str, key: str, datas: dict | list)
-        """
+        self._res_manager = ResourceManager(self._xing_folder)
+        self._last_message = str()
+        self._on_message = self._xingSignal()
+        self._on_realtime = self._xingSignal()
 
     #properties
     @property
@@ -97,6 +88,27 @@ class XingApi:
         """ return list of account numbers """
         return self._accounts
 
+    @property
+    def last_message(self):
+        """ last message from XingAPI """
+        return self._last_message
+
+    @property
+    def on_message(self):
+        """
+        메시지 핸들러 (LOGOUT, DISCONNECT ...)
+        on_message(msg: str)
+        """
+        return self._on_message
+
+    @property
+    def on_realtime(self):
+        """
+        실시간 이벤트 핸들러
+        on_realtime(tr_cd: str, key: str, datas: dict | list)
+        """
+        return self._on_realtime
+
     def close(self):
         """
         close XingAPI
@@ -108,22 +120,10 @@ class XingApi:
 
         if self._user_logined:
             self._module.ETK_Logout(self._hwnd)
-            self._user_logined = False
+            XingApi._user_logined = False
 
-        if self._server_connected:
+        if self._module.ETK_IsConnected():
             self._module.ETK_Disconnect()
-            self._server_connected = False
-
-    def get_requests_count(self, tr_cd: str):
-        """
-        TR의 초당 전송 가능 횟수, Base 시간(초단위), TR의 10분당 제한 건수, 10분내 요청한 해당 TR의 총 횟수를 반환합니다.
-        """
-        tr_cd_b = tr_cd.encode(self.enc)
-        per_sec:int = self._module.ETK_GetTRCountPerSec(tr_cd_b)
-        base_sec:int = self._module.ETK_GetTRCountBaseSec(tr_cd_b)
-        limit:int = self._module.ETK_GetTRCountLimit(tr_cd_b)
-        requests:int = self._module.ETK_GetTRCountRequest(tr_cd_b)
-        return per_sec, base_sec, limit, requests
 
     async def login(self, user_id: str, user_pwd: str, cert_pwd: str = "") -> bool:
         """
@@ -131,19 +131,20 @@ class XingApi:
         cert_pwd가 비어있으면 시뮬레이션 모드
         """
         if self.logined:
-            self.last_message = "Already connected"
+            self._last_message = "Already connected"
             return True
 
         if not self._module:
-            self.last_message = "XingAPI.dll is not loaded"
+            self._last_message = "XingAPI.dll is not loaded"
             return False
 
-        self.last_message = ""
+        self._last_message = ""
         self._accounts.clear()
 
-        self._is_simulation = len(cert_pwd) == 0
-        self._server_connected = self._module.ETK_Connect(self._hwnd, self.simul_domain if self._is_simulation else self.real_domain, 20001, self.XM_MSG_BASE, -1, -1)
-        if self._server_connected:
+        XingApi._is_simulation = len(cert_pwd) == 0
+        if not self._module.ETK_IsConnected():
+            self._module.ETK_Connect(self._hwnd, self.simul_domain if self._is_simulation else self.real_domain, 20001, self.XM_MSG_BASE, -1, -1)
+        if self._module.ETK_IsConnected():
             ret = self._module.ETK_Login(self._hwnd, user_id.encode(self.enc), user_pwd.encode(self.enc), cert_pwd.encode(self.enc), 0, False)
             if ret:
                 code_msg = ['', '']
@@ -154,7 +155,7 @@ class XingApi:
                 self._async_nodes.append(node)
                 await node.wait()
                 self._async_nodes.remove(node)
-                self.last_message = f"[{code_msg[0]}] {code_msg[1]}"
+                self._last_message = f"[{code_msg[0]}] {code_msg[1]}"
                 if code_msg[0] == "0000":
                     account_count = self._module.ETK_GetAccountListCount()
                     MAX_PATH = 255
@@ -174,13 +175,13 @@ class XingApi:
                             account.pass_number = '0000'
                         self._accounts.append(account)
 
-                    self._user_logined = True
+                    XingApi._user_logined = True
                     return True
             else:
-                self.last_message = "로그인 실패."
+                self._last_message = "로그인 실패."
         else:
             err_code = self._module.ETK_GetLastError()
-            self.last_message = f"[{err_code}] {self._get_error_message(err_code)}"
+            self._last_message = f"[{err_code}] {self._get_error_message(err_code)}"
         self.close()
         return False
 
@@ -189,16 +190,16 @@ class XingApi:
         request data to server
         """
         if not self.logined:
-            self.last_message = "Not logined"
+            self._last_message = "로그인 후 사용 가능합니다."
             return None
 
         res_info = self._res_manager.get(tr_cd)
         if res_info is None:
-            self.last_message = "자원 정보를 찾을 수 없습니다."
+            self._last_message = "자원 정보를 찾을 수 없습니다."
             return None
 
         if not res_info.is_func:
-            self.last_message = "실시간 요청은 realtime 함수를 이용하세요."
+            self._last_message = "실시간 요청은 realtime 함수를 이용하세요."
             return None
 
         response = ResponseData()
@@ -299,7 +300,7 @@ class XingApi:
                         obj_val = None
                     str_val, error = get_correct_field_value(field, obj_val)
                     if len(error) > 0:
-                        self.last_message = f"[{field.name}] {error}"
+                        self._last_message = f"[{field.name}] {error}"
                         return None
                     aligned_in_block_datas[i] = str_val
                     correct_in_block_dict[field.name] = str_val.strip()
@@ -313,12 +314,12 @@ class XingApi:
                         obj_val = None
                     str_val, error = get_correct_field_value(field, obj_val)
                     if len(error) > 0:
-                        self.last_message = f"[{field.name}] {error}"
+                        self._last_message = f"[{field.name}] {error}"
                         return None
                     aligned_in_block_datas[i] = str_val
                     correct_in_block_dict[field.name] = str_val.strip()
             else:
-                self.last_message = "입력 데이터 형식 오류"
+                self._last_message = "invalid inputs type"
                 return None
 
             response.body[in_block.name] = correct_in_block_dict
@@ -343,11 +344,11 @@ class XingApi:
                             if mktgb in ['F', 'O']:
                                 mktgb_symbols.append((mktgb, symbol))
                                 continue
-                        self.last_message = "입력 데이터 형식 오류"
+                        self._last_message = "입력 데이터 형식 오류"
                         return None
                     array_len = len(mktgb_symbols)
                     if array_len == 0:
-                        self.last_message = "입력 데이터 형식 오류"
+                        self._last_message = "입력 데이터 형식 오류"
                         return None
                     response.body[res_info.in_blocks[0].name] = {'nrec':array_len}
                     o3127InBlock1 = []
@@ -365,28 +366,28 @@ class XingApi:
                         o3127InBlock1.append({'mktgb':mktgb, 'symbol':symbol})
                     response.body[res_info.in_blocks[1].name] = o3127InBlock1
                 else:
-                    self.last_message = "입력 데이터 형식 오류"
+                    self._last_message = "invalid inputs type"
                     return None
             else:
-                self.last_message = "현재 버전에서 지원하지 않습니다."
+                self._last_message = "현재 버전에서 지원하지 않습니다."
                 return None
         elif in_blocks_count > 2:
-            self.last_message = "자원정보 inblock개수가 2이상입니다, 현재버전 지원 불가."
+            self._last_message = "자원정보 inblock개수가 2이상입니다, 현재버전 지원 불가."
             return None
         else:
-            self.last_message = "자원정보에 inblock이 없습니다, 현재버전 지원 불가."
+            self._last_message = "자원정보에 inblock이 없습니다, 현재버전 지원 불가."
             return None
 
-        self.last_message = ""
+        self._last_message = ""
         start_time = time.perf_counter_ns()
         if tr_cd in ["t1857", "ChartIndex", "ChartExcel"]:
             nRqID = self._module.ETK_RequestService(self._hwnd, tr_cd.encode(self.enc), indata_line)
         else:
-            nRqID = self._module.ETK_Request(self._hwnd, tr_cd.encode(self.enc), indata_line, len(indata_line), cont_yn, cont_key.encode(self.enc), self._default_timeout)
+            nRqID = self._module.ETK_Request(self._hwnd, tr_cd.encode(self.enc), indata_line, len(indata_line), cont_yn, cont_key.encode(self.enc), self.default_timeout)
         response.id = nRqID
         response.ticks.append(time.perf_counter_ns() - start_time)
         if response.id < 0:
-            self.last_message = f"[{response.id}] {self._get_error_message(response.id)}"
+            self._last_message = f"[{response.id}] {self._get_error_message(response.id)}"
             return None
         def callback(wparam, lparam):
             if wparam in [RECV_FLAG.MESSAGE_DATA, RECV_FLAG.SYSTEM_ERROR_DATA]:
@@ -514,10 +515,10 @@ class XingApi:
 
         node = XingApi._asyncNode(response.id, callback)
         self._async_nodes.append(node)
-        await node.wait(self._default_timeout)
+        await node.wait()
         response.ticks.append(time.perf_counter_ns() - start_time)
         self._async_nodes.remove(node)
-        self.last_message = f"[{response.rsp_cd}] {response.rsp_msg}"
+        self._last_message = f"[{response.rsp_cd}] {response.rsp_msg}"
         if response.id < 0:
             return None
 
@@ -526,9 +527,9 @@ class XingApi:
     def remove_service(self, tr_cd: str, data: str) -> bool:
         ret = self._module.ETK_RemoveService(self._hwnd, tr_cd.encode(self.enc), data.encode(self.enc))
         if ret < 0:
-            self.last_message = f"[{ret}] {self._get_error_message(ret)}"
+            self._last_message = f"[{ret}] {self._get_error_message(ret)}"
             return False
-        self.last_message = ""
+        self._last_message = ""
         return True
 
     def realtime(self, tr_cd:str, in_datas:str, advise: bool):
@@ -536,23 +537,23 @@ class XingApi:
         advise / unadvise realtime data to server
         """
         if not self.logined:
-            self.last_message = "Not logined"
+            self._last_message = "로그인 후 사용 가능합니다."
             return False
 
         if not advise and len(tr_cd) == 0 :
             if self._module.ETK_UnadviseWindow(self._hwnd):
-                self.last_message = "모든 실시간 해제 성공."
+                self._last_message = "모든 실시간 해제 성공."
                 return True
-            self.last_message = "모든 실시간 해제 실패."
+            self._last_message = "모든 실시간 해제 실패."
             return False
 
         res_info = self._res_manager.get(tr_cd)
         if res_info is None:
-            self.last_message = "자원 정보를 찾을 수 없습니다."
+            self._last_message = "자원 정보를 찾을 수 없습니다."
             return False
 
         if res_info.is_func:
-            self.last_message = "실시간 요청이 아닙니다."
+            self._last_message = "실시간 요청이 아닙니다."
             return False
 
         in_datas = [x.strip() for x in in_datas.split(",")]
@@ -578,10 +579,10 @@ class XingApi:
 
         if not ok:
             err_code = self._get_last_error()
-            self.last_message = f"[{err_code}] {self._get_error_message(err_code)}"
+            self._last_message = f"[{err_code}] {self._get_error_message(err_code)}"
             return False
 
-        self.last_message = ""
+        self._last_message = ""
         return True
 
     # def advise_realtime(self, tr_cd:str, in_datas:str):
@@ -615,12 +616,11 @@ class XingApi:
                             break
 
                 case XING_MSG.XM_LOGOUT:
-                    self._user_logined = False
+                    XingApi._user_logined = False
                     self.on_message.emit_signal('LOGOUT')
 
                 case XING_MSG.XM_DISCONNECT:
-                    self._user_logined = False
-                    self._server_connected = False
+                    XingApi._user_logined = False
                     self.on_message.emit_signal('DISCONNECT')
 
                 case XING_MSG.XM_RECEIVE_DATA:
@@ -658,6 +658,10 @@ class XingApi:
                         node.async_result = -902
                         node.set()
                     self._module.ETK_ReleaseRequestData(hash_id)
+
+                case XING_MSG.XM_RECEIVE_LINK_DATA:
+                    if wparam == RECV_FLAG.LINK_DATA:
+                        self._module.ETK_ReleaseMessageData(lparam)
 
                 case XING_MSG.XM_RECEIVE_REAL_DATA | XING_MSG.XM_RECEIVE_REAL_DATA_SEARCH | XING_MSG.XM_RECEIVE_REAL_DATA_CHART:
                     unpack_result = ctypes.cast(lparam, ctypes.POINTER(REAL_RECV_PACKET)).contents
@@ -713,23 +717,28 @@ class XingApi:
                                     size += 1
                                 pszData += size
                             self.on_realtime.emit_signal(szTrCode, szKeyData, col_datas)
-                    # else:
-                    #     bytes_data = ctypes.cast(pszData, ctypes.POINTER(ctypes.c_byte * nDataLength)).contents
-                    #     self.on_realtime.emit_signal(szTrCode, szKeyData, list(bytes_data))
-
-                case XING_MSG.XM_RECEIVE_LINK_DATA:
-                    pass
 
             return 0
 
         return win32gui.DefWindowProc(hwnd, wm_msg, wparam, lparam)
+
+    def get_requests_count(self, tr_cd: str):
+        """
+        TR의 초당 전송 가능 횟수, Base 시간(초단위), TR의 10분당 제한 건수, 10분내 요청한 해당 TR의 총 횟수를 반환합니다.
+        """
+        tr_cd_b = tr_cd.encode(self.enc)
+        per_sec:int = self._module.ETK_GetTRCountPerSec(tr_cd_b)
+        base_sec:int = self._module.ETK_GetTRCountBaseSec(tr_cd_b)
+        limit:int = self._module.ETK_GetTRCountLimit(tr_cd_b)
+        requests:int = self._module.ETK_GetTRCountRequest(tr_cd_b)
+        return per_sec, base_sec, limit, requests
 
     def set_mode(self, mode: str, value:str):
         """
         set mode
         """
         if not self._module:
-            self.last_message = "XingAPI.dll is not loaded"
+            self._last_message = "XingAPI.dll is not loaded"
             return False
         self._module.ETK_SetMode(mode.encode(self.enc), value.encode(self.enc))
         return True
