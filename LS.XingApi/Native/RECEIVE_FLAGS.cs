@@ -7,6 +7,7 @@
         SYSTEM_ERROR_DATA = 3,
         RELEASE_DATA = 4,
         //
+        TIME_OUT = 7,
         LINK_DATA = 10,
     }
 }

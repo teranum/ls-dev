@@ -736,17 +736,17 @@ namespace LS.XingApi.Native
         /// <returns>압축을 해제한 데이터(pszDest)의 길이</returns>
         /// <remarks>
         /// 데이터의 압축을 해제한다 : 틱챠트 데이터 등에서 압축상태로 수신받은 경우 사용
-        ///     반환값       - 압축을 해제한 데이터(pszDest)의 길이
-        ///
-        ///     pszSrc		- 압축상태 데이터
-        ///     pszDest		- 압축을 해제한 데이터를 저장할 메모리 (Outblock 구조체 사이즈 최대 2000건)
-        ///	   nSrcLen	    - pszSrc 데이터의 길이
-        /// 
+        /// <br/>    반환값       - 압축을 해제한 데이터(pszDest)의 길이
+        /// <br/>
+        /// <br/>    pszSrc		- 압축상태 데이터
+        /// <br/>    pszDest		- 압축을 해제한 데이터를 저장할 메모리 (Outblock 구조체 사이즈 최대 2000건)
+        ///	<br/>   nSrcLen	    - pszSrc 데이터의 길이
+        /// <br/>
         /// <br/> 사용 방법 
         /// <br/>     ex) t8411 TR 이용시, InBlock의 comp_yn(압축여부) 필드에 "Y" 입력 후 조회
         /// <br/>          ReceiveData() 에서 Occurs 블럭(t8411OutBlock1)이 압축되어 수신되므로, 해당 블럭 압축을 해제
         /// <br/> 
-        ///	<_async_code>
+        ///	<code>
         /// LRESULT t8411_Wnd::OnXMReceiveData( WPARAM wParam, LPARAM lParam )
         /// {
         ///     //-------------------------------------------------------------------------------------
@@ -779,7 +779,7 @@ namespace LS.XingApi.Native
         ///         }
         ///     }
         /// }
-        ///	</_async_code>
+        ///	</code>
         /// </remarks>
         public static int ETK_Decompress(IntPtr pszSrc, IntPtr pszDest, int nSrcLen) => _ETK_Decompress(pszSrc, pszDest, nSrcLen);
         private delegate int ETK_Decompress_Handler(IntPtr pszSrc, IntPtr pszDest, int nSrcLen);

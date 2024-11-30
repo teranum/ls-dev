@@ -591,10 +591,16 @@ namespace LS.XingApi
                             }
                         }
                         break;
+                    case RECEIVE_FLAGS.TIME_OUT:
+                        {
+                            response.rsp_cd = "-902";
+                            response.rsp_msg = "TIME_OUT";
+                            response.id = -1;
+                        }
+                        break;
                     default:
                         break;
                 }
-
             }
         }
 
@@ -824,7 +830,7 @@ namespace LS.XingApi
                         var async_node = _async_nodes.Find(x => x.ident_id == nRqID);
                         if (async_node is not null)
                         {
-                            async_node._async_result = -902;
+                            async_node.callback((WPARAM)RECEIVE_FLAGS.TIME_OUT, lParam);
                             async_node.Set();
                         }
                         XingNative.ETK_ReleaseRequestData(nRqID);
@@ -914,30 +920,18 @@ namespace LS.XingApi
 
         class AsyncNode(int ident_id, Action<WPARAM, LPARAM> callback)
         {
+            private readonly ManualResetEvent _async_wait = new(initialState: false);
             public readonly int ident_id = ident_id;
             public Action<WPARAM, LPARAM> callback = callback;
-
-            private readonly ManualResetEvent _async_wait = new(initialState: false);
-
-            public bool _async_evented = false;
-            public string _async_code = string.Empty;
-            public string _async_msg = string.Empty;
-            public int _async_result = 0;
-
             public bool Set() => _async_wait.Set();
-            public Task<bool> Wait(int millisecondsTimeout = -1)
-            {
-                return Task.Run(() =>
+            public Task<bool> Wait() => Task.Run(() =>
                 {
-                    if (!_async_wait.WaitOne(millisecondsTimeout))
+                    if (!_async_wait.WaitOne())
                     {
-                        if (!_async_evented)
-                            _async_result = -902;
                         return false;
                     }
                     return true;
                 });
-            }
         }
         private delegate bool XING64_Init_Handler(string szFolder);
     }
