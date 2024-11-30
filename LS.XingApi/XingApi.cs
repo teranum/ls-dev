@@ -15,9 +15,12 @@ namespace LS.XingApi
         private const string SIMUL_DOMAIN = "demo.ls-sec.co.kr";
         private const int WM_XING = 0x0400;
 
+        private static bool _is_Logined;
+        private static bool _is_Simulation;
+        private static List<AccountInfo> _accountInfos { get; } = [];
+
         private readonly Form _win32Window;
         private readonly ResManager _resManager;
-        private List<AccountInfo> _accountInfos { get; } = [];
         private readonly List<AsyncNode> _async_nodes = [];
 
         /// <summary>API자원관리자</summary>
@@ -29,17 +32,17 @@ namespace LS.XingApi
         /// <inheritdoc cref="RealtimeEventArgs"/>
         public event EventHandler<RealtimeEventArgs>? OnRealtimeEvent;
 
-        /// <summary>Api설치 여부</summary>
-        public bool ModuleLoaded { get; private set; }
+        /// <summary>DLL로딩 여부</summary>
+        public bool ModuleLoaded => XingNative.IsLoaded;
 
         /// <summary>연결 여부</summary>
-        public bool Logined { get; private set; }
+        public bool Logined => _is_Logined;
 
         /// <summary>모의투자 여부</summary>
-        public bool IsSimulation { get; private set; }
+        public bool IsSimulation => _is_Simulation;
 
         /// <summary>계좌정보 리스트. (로그인 시 자동 등록 됩니다)</summary>
-        public IReadOnlyList<AccountInfo> AccountInfos => _accountInfos;
+        public List<AccountInfo> AccountInfos => _accountInfos;
 
         /// <summary>
         /// 마지막 메시지
@@ -54,7 +57,6 @@ namespace LS.XingApi
         public XingApi(string apiFolder = "")
         {
             XingNative.Init(apiFolder);
-            ModuleLoaded = XingNative.IsLoaded;
             _resManager = new ResManager(XingNative.ApiFolder);
             _win32Window = new WndForm()
             {
@@ -92,15 +94,15 @@ namespace LS.XingApi
             LastMessage = string.Empty;
             _accountInfos.Clear();
 
-            IsSimulation = certPassword.Length == 0;
+            _is_Simulation = certPassword.Length == 0;
 
             if (!XingNative.ETK_IsConnected())
             {
                 bool ok = XingNative.ETK_Connect(Handle, IsSimulation ? SIMUL_DOMAIN : REAL_DOMAIN, 20001, WM_XING, -1, -1);
                 if (!ok)
                 {
-                    int nErrCode = GetLastError();
-                    LastMessage = $"[{nErrCode}] {GetErrorMessage(nErrCode)}";
+                    int nErrCode = XingNative.ETK_GetLastError();
+                    LastMessage = $"[{nErrCode}] {XingNative.GetErrorMessage(nErrCode)}";
                     return false;
                 }
             }
@@ -131,7 +133,7 @@ namespace LS.XingApi
                             var NickName = XingNative.GetAcctNickname(Number);
                             _accountInfos.Add(new AccountInfo(Number, Name, DetailName, NickName));
                         }
-                        Logined = true;
+                        _is_Logined = true;
                         return true;
                     }
                 }
@@ -142,8 +144,8 @@ namespace LS.XingApi
             }
             else
             {
-                int nErrCode = GetLastError();
-                LastMessage = $"[{nErrCode}] {GetErrorMessage(nErrCode)}";
+                int nErrCode = XingNative.ETK_GetLastError();
+                LastMessage = $"[{nErrCode}] {XingNative.GetErrorMessage(nErrCode)}";
             }
 
             Close();
@@ -155,49 +157,15 @@ namespace LS.XingApi
         {
             if (!ModuleLoaded)
                 return;
-            if (Logined)
+            if (_is_Logined)
             {
                 XingNative.ETK_Logout(Handle);
-                Logined = false;
+                _is_Logined = false;
             }
             if (XingNative.ETK_IsConnected())
             {
                 XingNative.ETK_Disconnect();
             }
-        }
-
-        /// <summary>
-        /// 마지막 오류코드 반환
-        /// </summary>
-        /// <returns></returns>
-        public static int GetLastError() => XingNative.ETK_GetLastError();
-
-        /// <summary>
-        /// 오류코드에 대한 메시지 반환
-        /// </summary>
-        /// <param name="nErrCode"></param>
-        /// <returns></returns>
-        public static string GetErrorMessage(int nErrCode)
-        {
-            switch (nErrCode)
-            {
-                case -900:
-                    return "DLL 모듈 로드 실패.";
-                case -901:
-                    return "이미 작동중 입니다.";
-                case -902:
-                    return "타임아웃.";
-                case -903:
-                    return "SYSTEM ERROR.";
-                case -904:
-                    return "수신데이터가 없습니다.";
-                case -905:
-                    return "자원정보가 없습니다.";
-
-                default:
-                    break;
-            }
-            return XingNative.GetErrorMessage(nErrCode);
         }
 
         private static string PtrToStringAnsi(IntPtr ptr) => Marshal.PtrToStringAnsi(ptr)?.TrimEnd('\0').Trim() ?? string.Empty;
@@ -206,19 +174,6 @@ namespace LS.XingApi
         {
             return PtrToStringAnsi(Marshal.UnsafeAddrOfPinnedArrayElement(bytes, 0), bytes.Length);
         }
-
-        /// <summary>
-        /// TR의 초당 전송 가능 횟수, Base 시간(초단위), TR의 10분당 제한 건수, 10분내 요청한 해당 TR의 총 횟수를 반환합니다.
-        /// </summary>
-        /// <param name="tr_cd">증권 거래코드</param>
-        /// <returns></returns>
-        public RequestCount GetRequestCount(string tr_cd) => new()
-        {
-            PerSec = XingNative.ETK_GetTRCountPerSec(tr_cd),
-            BaseSec = XingNative.ETK_GetTRCountBaseSec(tr_cd),
-            Limit = XingNative.ETK_GetTRCountLimit(tr_cd),
-            Requests = XingNative.ETK_GetTRCountRequest(tr_cd),
-        };
 
         /// <summary>
         /// 비동기 TR 요청
@@ -244,6 +199,12 @@ namespace LS.XingApi
 
         private async Task<ResponseTrData?> Inter_RequestAsync(string tr_cd, object in_datas, bool cont_yn = false, string cont_key = "")
         {
+            if (!Logined)
+            {
+                LastMessage = "로그인 후 사용 가능합니다.";
+                return null;
+            }
+
             var res_info = _resManager.GetResInfo(tr_cd);
             if (res_info is null)
             {
@@ -467,7 +428,7 @@ namespace LS.XingApi
                 nRqID = XingNative.ETK_Request(Handle, tr_cd, indata_line.ToString(), indata_line.Length, cont_yn, cont_key, 10);
             if (nRqID < 0)
             {
-                LastMessage = $"[{nRqID}]: {GetErrorMessage(nRqID)}";
+                LastMessage = $"[{nRqID}]: {XingNative.GetErrorMessage(nRqID)}";
                 return null;
             }
             response.id = nRqID;
@@ -675,6 +636,12 @@ namespace LS.XingApi
         /// <returns>true: 요청성공, false: 요청실패</returns>
         public bool Realtime(string tr_cd, string tr_key, bool advise)
         {
+            if (!Logined)
+            {
+                LastMessage = "로그인 후 사용 가능합니다.";
+                return false;
+            }
+
             if (!advise && tr_cd.Length == 0)
             {
                 if (XingNative.ETK_UnadviseWindow(Handle))
@@ -751,7 +718,15 @@ namespace LS.XingApi
         /// <summary>
         /// 부가 서비스용 TR를 해제합니다.
         /// </summary>
-        public int RemoveService(string szCode, string szData) => XingNative.ETK_RemoveService(Handle, szCode, szData);
+        public int RemoveService(string szCode, string szData)
+        {
+            if (!Logined)
+            {
+                LastMessage = "로그인 후 사용 가능합니다.";
+                return -1;
+            }
+            return XingNative.ETK_RemoveService(Handle, szCode, szData);
+        }
 
         private void WndProc(IntPtr hwnd, uint msg, IntPtr wParam, IntPtr lParam)
         {
@@ -763,13 +738,13 @@ namespace LS.XingApi
             {
                 case XM.XM_LOGOUT:
                     {
-                        Logined = false;
+                        _is_Logined = false;
                         OnMessageEvent?.Invoke(this, new("LOGOUT"));
                     }
                     break;
                 case XM.XM_DISCONNECT:
                     {
-                        Logined = false;
+                        _is_Logined = false;
                         OnMessageEvent?.Invoke(this, new("DISCONNECT"));
                     }
                     break;
