@@ -18,10 +18,9 @@ namespace LS.XingApi
         private static bool _is_Logined;
         private static bool _is_Simulation;
         private static List<AccountInfo> _accountInfos { get; } = [];
-
         private readonly Form _win32Window;
         private readonly ResManager _resManager;
-        private readonly List<AsyncNode> _async_nodes = [];
+        private readonly List<TaskCompletionSource> _task_srcs = [];
 
         /// <summary>API자원관리자</summary>
         public ResManager ResourceManager => _resManager;
@@ -113,13 +112,22 @@ namespace LS.XingApi
                 if (ret)
                 {
                     var code_msg = (string.Empty, string.Empty);
-                    var node = new AsyncNode(0, (wParam, lParam) =>
-                    {
-                        code_msg = (PtrToStringAnsi(wParam), PtrToStringAnsi(lParam));
-                    });
-                    _async_nodes.Add(node);
-                    await node.Wait();
-                    _async_nodes.Remove(node);
+                    //var node = new AsyncNode(0, (wParam, lParam) =>
+                    //{
+                    //    code_msg = (PtrToStringAnsi(wParam), PtrToStringAnsi(lParam));
+                    //});
+                    //_async_nodes.Add(node);
+                    //await node.Wait();
+                    //_async_nodes.Remove(node);
+
+                    TaskCompletionSource tcs = new(new Tuple<int, Action<WPARAM, LPARAM>>(0,
+                        (wParam, lParam) =>
+                        {
+                            code_msg = (PtrToStringAnsi(wParam), PtrToStringAnsi(lParam));
+                        }));
+                    _task_srcs.Add(tcs);
+                    await tcs.Task;
+                    _task_srcs.Remove(tcs);
 
                     LastMessage = $"[{code_msg.Item1}] {code_msg.Item2}";
                     if (code_msg.Item1.Equals("0000"))
@@ -431,13 +439,14 @@ namespace LS.XingApi
                 LastMessage = $"[{nRqID}]: {XingNative.GetErrorMessage(nRqID)}";
                 return null;
             }
+
             response.id = nRqID;
             response.ticks.Add(stopwatch.ElapsedTicks);
 
-            var node = new AsyncNode(nRqID, callback);
-            _async_nodes.Add(node);
-            await node.Wait();
-            _async_nodes.Remove(node);
+            TaskCompletionSource tcs = new(new Tuple<int, Action<WPARAM, LPARAM>>(nRqID, callback));
+            _task_srcs.Add(tcs);
+            await tcs.Task;
+            _task_srcs.Remove(tcs);
 
             response.ticks.Add(stopwatch.ElapsedTicks);
             LastMessage = $"[{response.rsp_cd}] {response.rsp_msg}";
@@ -760,11 +769,12 @@ namespace LS.XingApi
                         // WPARAM: Message Code, 문자열 형태,“0000” 이면 성공, 그 외에는 실패
                         // LPARAM: Message Text
                         int ident_id = 0;
-                        var async_node = _async_nodes.Find(x => x.ident_id == ident_id);
-                        if (async_node is not null)
+                        var match_src = _task_srcs.Find(x => ((Tuple<int, Action<WPARAM, LPARAM>>)x.Task.AsyncState!).Item1 == ident_id);
+                        if (match_src is not null)
                         {
-                            async_node.callback(wParam, lParam);
-                            async_node.Set();
+                            var state = (Tuple<int, Action<WPARAM, LPARAM>>)match_src.Task.AsyncState!;
+                            state.Item2(wParam, lParam);
+                            match_src.TrySetResult();
                         }
                     }
                     break;
@@ -780,19 +790,24 @@ namespace LS.XingApi
                             case RECEIVE_FLAGS.REQUEST_DATA:
                                 {
                                     int nRqID = Marshal.PtrToStructure<int>(lParam);
-                                    var async_node = _async_nodes.Find(x => x.ident_id == nRqID);
-                                    async_node?.callback(wParam, lParam);
+                                    var match_src = _task_srcs.Find(x => ((Tuple<int, Action<WPARAM,LPARAM>>) x.Task.AsyncState!).Item1 == nRqID);
+                                    if (match_src is not null)
+                                    {
+                                        var state = (Tuple<int, Action<WPARAM, LPARAM>>)match_src.Task.AsyncState!;
+                                        state.Item2(wParam, lParam);
+                                    }
                                 }
                                 break;
                             case RECEIVE_FLAGS.MESSAGE_DATA:
                             case RECEIVE_FLAGS.SYSTEM_ERROR_DATA:
                                 {
                                     int nRqID = Marshal.PtrToStructure<int>(lParam);
-                                    var async_node = _async_nodes.Find(x => x.ident_id == nRqID);
-                                    if (async_node is not null)
+                                    var match_src = _task_srcs.Find(x => ((Tuple<int, Action<WPARAM, LPARAM>>)x.Task.AsyncState!).Item1 == nRqID);
+                                    if (match_src is not null)
                                     {
-                                        async_node.callback(wParam, lParam);
-                                        async_node.Set();
+                                        var state = (Tuple<int, Action<WPARAM, LPARAM>>)match_src.Task.AsyncState!;
+                                        state.Item2(wParam, lParam);
+                                        match_src.TrySetResult();
                                     }
 
                                     XingNative.ETK_ReleaseMessageData(lParam);
@@ -806,11 +821,12 @@ namespace LS.XingApi
                                 {
                                     // LPARAM : 정수로 Requests ID를 의미
                                     int nRqID = lParam.ToInt32();
-                                    var async_node = _async_nodes.Find(x => x.ident_id == nRqID);
-                                    if (async_node is not null)
+                                    var match_src = _task_srcs.Find(x => ((Tuple<int, Action<WPARAM, LPARAM>>)x.Task.AsyncState!).Item1 == nRqID);
+                                    if (match_src is not null)
                                     {
-                                        async_node.callback(wParam, lParam);
-                                        async_node.Set();
+                                        var state = (Tuple<int, Action<WPARAM, LPARAM>>)match_src.Task.AsyncState!;
+                                        state.Item2(wParam, lParam);
+                                        match_src.TrySetResult();
                                     }
                                     XingNative.ETK_ReleaseRequestData(nRqID);
                                 }
@@ -826,12 +842,12 @@ namespace LS.XingApi
                         // WPARAM: 사용안함
                         // LPARAM: Requests ID
                         int nRqID = lParam.ToInt32();
-
-                        var async_node = _async_nodes.Find(x => x.ident_id == nRqID);
-                        if (async_node is not null)
+                        var match_src = _task_srcs.Find(x => ((Tuple<int, Action<WPARAM, LPARAM>>)x.Task.AsyncState!).Item1 == nRqID);
+                        if (match_src is not null)
                         {
-                            async_node.callback((WPARAM)RECEIVE_FLAGS.TIME_OUT, lParam);
-                            async_node.Set();
+                            var state = (Tuple<int, Action<WPARAM, LPARAM>>)match_src.Task.AsyncState!;
+                            state.Item2((WPARAM)RECEIVE_FLAGS.TIME_OUT, lParam);
+                            match_src.TrySetResult();
                         }
                         XingNative.ETK_ReleaseRequestData(nRqID);
                     }
@@ -918,21 +934,6 @@ namespace LS.XingApi
             }
         }
 
-        class AsyncNode(int ident_id, Action<WPARAM, LPARAM> callback)
-        {
-            private readonly ManualResetEvent _async_wait = new(initialState: false);
-            public readonly int ident_id = ident_id;
-            public Action<WPARAM, LPARAM> callback = callback;
-            public bool Set() => _async_wait.Set();
-            public Task<bool> Wait() => Task.Run(() =>
-                {
-                    if (!_async_wait.WaitOne())
-                    {
-                        return false;
-                    }
-                    return true;
-                });
-        }
         private delegate bool XING64_Init_Handler(string szFolder);
     }
 }
