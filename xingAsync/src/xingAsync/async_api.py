@@ -67,7 +67,7 @@ class XingApi:
         self._on_message = self._xingSignal()
         self._on_realtime = self._xingSignal()
 
-    #properties
+    # region properties
     @property
     def loaded(self):
         """ return True if xingAPI.dll is loaded """
@@ -109,6 +109,9 @@ class XingApi:
         """
         return self._on_realtime
 
+    # endregion
+
+    #region methods
     def close(self):
         """
         close XingAPI
@@ -591,6 +594,28 @@ class XingApi:
     # def unadvise_realtime(self, tr_cd:str, in_datas:str):
     #     return self.realtime(tr_cd, in_datas, False)
 
+    def get_requests_count(self, tr_cd: str):
+        """
+        TR의 초당 전송 가능 횟수, Base 시간(초단위), TR의 10분당 제한 건수, 10분내 요청한 해당 TR의 총 횟수를 반환합니다.
+        """
+        tr_cd_b = tr_cd.encode(self.enc)
+        per_sec:int = self._module.ETK_GetTRCountPerSec(tr_cd_b)
+        base_sec:int = self._module.ETK_GetTRCountBaseSec(tr_cd_b)
+        limit:int = self._module.ETK_GetTRCountLimit(tr_cd_b)
+        requests:int = self._module.ETK_GetTRCountRequest(tr_cd_b)
+        return per_sec, base_sec, limit, requests
+
+    def set_mode(self, mode: str, value:str):
+        """
+        set mode
+        """
+        if not self._module:
+            self._last_message = "XingAPI.dll is not loaded"
+            return False
+        self._module.ETK_SetMode(mode.encode(self.enc), value.encode(self.enc))
+        return True
+    #endregion
+
     def _get_last_error(self):
         if not self._module:
             return -1
@@ -721,27 +746,6 @@ class XingApi:
             return 0
 
         return win32gui.DefWindowProc(hwnd, wm_msg, wparam, lparam)
-
-    def get_requests_count(self, tr_cd: str):
-        """
-        TR의 초당 전송 가능 횟수, Base 시간(초단위), TR의 10분당 제한 건수, 10분내 요청한 해당 TR의 총 횟수를 반환합니다.
-        """
-        tr_cd_b = tr_cd.encode(self.enc)
-        per_sec:int = self._module.ETK_GetTRCountPerSec(tr_cd_b)
-        base_sec:int = self._module.ETK_GetTRCountBaseSec(tr_cd_b)
-        limit:int = self._module.ETK_GetTRCountLimit(tr_cd_b)
-        requests:int = self._module.ETK_GetTRCountRequest(tr_cd_b)
-        return per_sec, base_sec, limit, requests
-
-    def set_mode(self, mode: str, value:str):
-        """
-        set mode
-        """
-        if not self._module:
-            self._last_message = "XingAPI.dll is not loaded"
-            return False
-        self._module.ETK_SetMode(mode.encode(self.enc), value.encode(self.enc))
-        return True
 
     class _xingSignal:
         def __init__(self):
