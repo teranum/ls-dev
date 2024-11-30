@@ -114,14 +114,6 @@ class XingApi:
             self._module.ETK_Disconnect()
             self._server_connected = False
 
-    def get_res_info(self, tr_cd: str):
-        """ get resource information by tr_cd """
-        return self._res_manager.get(tr_cd)
-
-    def set_res_info(self, full_path: str):
-        """ set resource information from file """
-        return self._res_manager.set_from_filepath(full_path)
-
     def get_requests_count(self, tr_cd: str):
         """
         TR의 초당 전송 가능 횟수, Base 시간(초단위), TR의 10분당 제한 건수, 10분내 요청한 해당 TR의 총 횟수를 반환합니다.
@@ -164,7 +156,6 @@ class XingApi:
                 self._async_nodes.remove(node)
                 self.last_message = f"[{code_msg[0]}] {code_msg[1]}"
                 if code_msg[0] == "0000":
-                    self.last_message = code_msg[1]
                     account_count = self._module.ETK_GetAccountListCount()
                     MAX_PATH = 255
                     buffer = ctypes.create_string_buffer(MAX_PATH)
@@ -186,7 +177,7 @@ class XingApi:
                     self._user_logined = True
                     return True
             else:
-                self.last_message = "로그인 서버전송에 실패하였습니다."
+                self.last_message = "로그인 실패."
         else:
             err_code = self._module.ETK_GetLastError()
             self.last_message = f"[{err_code}] {self._get_error_message(err_code)}"
@@ -201,7 +192,7 @@ class XingApi:
             self.last_message = "Not logined"
             return None
 
-        res_info = self.get_res_info(tr_cd)
+        res_info = self._res_manager.get(tr_cd)
         if res_info is None:
             self.last_message = "자원 정보를 찾을 수 없습니다."
             return None
@@ -229,7 +220,7 @@ class XingApi:
             aligned_in_block_datas = [None] * in_block_field_count
             correct_in_block_dict = {}
 
-            def get_correct_field_value(field: FieldSpec, value: object) -> str:
+            def get_correct_field_value(field: FieldSpec, value: object):
                 # return value, error
                 size = field.size
                 if size == 0: return value, ''
@@ -481,10 +472,10 @@ class XingApi:
                         else:
                             nFrameCount = 1
                         rows, cols = (nFrameCount, len(out_block.fields))
-                        datas = [None] * rows
-                        if nDataLength < out_block.record_size * nFrameCount:
+                        if nDataLength < out_block.record_size * rows:
                             # errMsg = "수신 데이터 길이 오류."
                             break
+                        datas = [None] * rows
                         for i in range(rows):
                             col_datas = {}
                             for j in range(cols):
@@ -532,6 +523,14 @@ class XingApi:
 
         return response
 
+    def remove_service(self, tr_cd: str, data: str) -> bool:
+        ret = self._module.ETK_RemoveService(self._hwnd, tr_cd.encode(self.enc), data.encode(self.enc))
+        if ret < 0:
+            self.last_message = f"[{ret}] {self._get_error_message(ret)}"
+            return False
+        self.last_message = ""
+        return True
+
     def realtime(self, tr_cd:str, in_datas:str, advise: bool):
         """
         advise / unadvise realtime data to server
@@ -542,12 +541,12 @@ class XingApi:
 
         if not advise and len(tr_cd) == 0 :
             if self._module.ETK_UnadviseWindow(self._hwnd):
-                self.last_message = ""
+                self.last_message = "모든 실시간 해제 성공."
                 return True
             self.last_message = "모든 실시간 해제 실패."
             return False
 
-        res_info = self.get_res_info(tr_cd)
+        res_info = self._res_manager.get(tr_cd)
         if res_info is None:
             self.last_message = "자원 정보를 찾을 수 없습니다."
             return False
@@ -616,9 +615,12 @@ class XingApi:
                             break
 
                 case XING_MSG.XM_LOGOUT:
+                    self._user_logined = False
                     self.on_message.emit_signal('LOGOUT')
 
                 case XING_MSG.XM_DISCONNECT:
+                    self._user_logined = False
+                    self._server_connected = False
                     self.on_message.emit_signal('DISCONNECT')
 
                 case XING_MSG.XM_RECEIVE_DATA:
@@ -674,7 +676,7 @@ class XingApi:
                     else:
                         real_cd = szTrCode
 
-                    res_info = self.get_res_info(real_cd)
+                    res_info = self._res_manager.get(real_cd)
                     if res_info:
                         if xM in [XING_MSG.XM_RECEIVE_REAL_DATA_SEARCH, xM == XING_MSG.XM_RECEIVE_REAL_DATA_CHART]:
                             out_block = res_info.out_blocks[1]
@@ -721,7 +723,17 @@ class XingApi:
             return 0
 
         return win32gui.DefWindowProc(hwnd, wm_msg, wparam, lparam)
-    
+
+    def set_mode(self, mode: str, value:str):
+        """
+        set mode
+        """
+        if not self._module:
+            self.last_message = "XingAPI.dll is not loaded"
+            return False
+        self._module.ETK_SetMode(mode.encode(self.enc), value.encode(self.enc))
+        return True
+
     class _xingSignal:
         def __init__(self):
             self.__slots = []
