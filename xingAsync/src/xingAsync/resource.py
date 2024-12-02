@@ -177,11 +177,11 @@ class ResInfo:
                 self.compressable = comp_yn is not None
 
 class ResourceManager:
+    _resources: dict[str, ResInfo] = {}
     def __init__(self, xing_folder = ""):
         self._package_folder = os.path.dirname(os.path.abspath(__file__))
         self._user_folder = os.path.dirname(os.path.abspath(__main__.__file__))
         self._xing_folder = xing_folder
-        self._resources: dict[str, ResInfo] = {}
 
     def set_from_text(self, text: str) :
         res_info = ResInfo()

@@ -53,6 +53,7 @@ namespace LS.XingApi.Native
             }
 
             ApiFolder = apiFolder;
+            Directory.SetCurrentDirectory(ApiFolder);
             nint handle;
             if (is_64bit)
             {

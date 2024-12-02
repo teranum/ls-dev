@@ -24,6 +24,7 @@ async def sample(api: XingApi):
     price = response['t1102OutBlock']['price']
     print(f'삼성전자 현재가: {price}')
 
+    print(response)
 
 if __name__ == "__main__":
     api = XingApi()

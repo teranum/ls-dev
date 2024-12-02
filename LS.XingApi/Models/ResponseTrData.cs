@@ -27,8 +27,8 @@
         /// <summary>resource info</summary>
         public ResInfo res = null!;
 
-        /// <summary>elapsed ticks for local/server (100ns)</summary>
-        public List<long> ticks = [];
+        /// <summary>elapsed elapsed_ms</summary>
+        public double elapsed_ms ;
 
         /// <summary>Get the elements in dictionary</summary>
         public object? this[string key] => body[key];

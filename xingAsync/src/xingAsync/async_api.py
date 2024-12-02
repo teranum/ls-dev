@@ -1,7 +1,7 @@
 ﻿import os, asyncio, ctypes, time, win32gui, win32api
-from xingAsync.models import AccountInfo, ResponseData
-from xingAsync.native import XING_MSG, RECV_FLAG, MSG_PACKET, RECV_PACKET, REAL_RECV_PACKET
-from xingAsync.resource import FieldSpec, ResourceManager
+from .models import AccountInfo, ResponseData
+from .native import XING_MSG, RECV_FLAG, MSG_PACKET, RECV_PACKET, REAL_RECV_PACKET
+from .resource import FieldSpec, ResourceManager
 
 class XingApi:
     real_domain = b"api.ls-sec.co.kr"
@@ -12,6 +12,7 @@ class XingApi:
 
     _module = None
     _user_logined = False
+    _user_id = str()
     _is_simulation = False
     _accounts: list[AccountInfo] = []
     _xing_folder = str()
@@ -20,6 +21,7 @@ class XingApi:
         """ XingApi class """
         if not self._module:
             is_64bit = ctypes.sizeof(ctypes.c_void_p) == 8
+
             if not os.path.exists(xing_folder):
                 import winreg as wrg
                 try:
@@ -35,6 +37,8 @@ class XingApi:
                     pass
 
             try:
+                save_cur_dir = os.getcwd()
+                os.chdir(xing_folder)
                 if is_64bit:
                     pack_dll_path = os.path.dirname(os.path.abspath(__file__)) + "\\native" + '\\xingAPI64.dll'
                     if os.path.exists(pack_dll_path):
@@ -45,9 +49,10 @@ class XingApi:
                     self._module.ETK_ReleaseMessageData.argtypes = [ctypes.c_voidp] # not used
                     self._module.ETK_Decompress.argtypes = [ctypes.c_voidp, ctypes.c_voidp, ctypes.c_int] # for decompress
                     if not self._module.XING64_Init(xing_folder.encode()):
-                        self._module = None
+                        XingApi._module = None
                 else:
                     XingApi._module = ctypes.WinDLL(os.path.join(xing_folder, "xingAPI.dll"))
+                os.chdir(save_cur_dir)
             except:
                 XingApi._module = None
 
@@ -77,6 +82,11 @@ class XingApi:
     def logined(self):
         """ return True if user logined """
         return self._user_logined
+
+    @property
+    def user_id(self):
+        """ return user id """
+        return self._user_id
 
     @property
     def is_simulation(self):
@@ -134,7 +144,7 @@ class XingApi:
         cert_pwd가 비어있으면 시뮬레이션 모드
         """
         if self.logined:
-            self._last_message = "Already connected"
+            self._last_message = "이미 로그인 되었습니다."
             return True
 
         if not self._module:
@@ -179,6 +189,7 @@ class XingApi:
                         self._accounts.append(account)
 
                     XingApi._user_logined = True
+                    XingApi._user_id = user_id
                     return True
             else:
                 self._last_message = "로그인 실패."
@@ -235,7 +246,7 @@ class XingApi:
                     else:
                         str_val = str(value)
                     if len(str_val) > size:
-                        return str_val, 'overflow'
+                        return str_val, f'자리수 초과, 최대 {size}자리'
                     return str_val.ljust(size), ''
                 if field.var_type == FieldSpec.VarType.INT:
                     if value is None:
@@ -246,9 +257,9 @@ class XingApi:
                         try:
                             str_val = str(int(value))
                         except:
-                            return str(value), 'invalid int value'
+                            return str(value), '입력 타입 오류'
                     if len(str_val) > size:
-                        return str_val, 'overflow'
+                        return str_val, f'자리수 초과, 최대 {size}자리'
                     return str_val.rjust(size, '0'), ''
                 if field.var_type == FieldSpec.VarType.FLOAT:
                     flag_B = res_info.headtype == 'B'
@@ -259,7 +270,7 @@ class XingApi:
                             try:
                                 str_val = str(float(value))
                             except:
-                                return str(value), 'invalid float value'
+                                return str(value), '입력 타입 오류'
                         if '.' not in str_val:
                             str_val += '.'
                             str_val += '0' * field.dot_size
@@ -271,7 +282,7 @@ class XingApi:
                             else:
                                 str_val += '0' * (field.dot_size - dot_len)
                         if len(str_val) > size:
-                            return str_val, 'overflow'
+                            return str_val, f'자리수 초과, 최대 {size}자리'
                         return str_val.rjust(size, '0'), ''
                     if value is None:
                         str_val = '0'
@@ -279,7 +290,7 @@ class XingApi:
                         try:
                             str_val = str(float(value))
                         except:
-                            return str(value), 'invalid float value'
+                            return str(value), '입력 타입 오류'
                     if '.' not in str_val:
                         str_val += '0' * field.dot_size
                     else:
@@ -290,7 +301,7 @@ class XingApi:
                         else:
                             str_val += '0' * (field.dot_size - dot_len)
                     if len(str_val) > size:
-                        return str_val, 'overflow'
+                        return str_val, f'자리수 초과, 최대 {size}자리'
                     return str_val.rjust(size, '0'), ''
                 return value, 'invalid type'
 
@@ -322,7 +333,7 @@ class XingApi:
                     aligned_in_block_datas[i] = str_val
                     correct_in_block_dict[field.name] = str_val.strip()
             else:
-                self._last_message = "invalid inputs type"
+                self._last_message = "입력 타입 오류"
                 return None
 
             response.body[in_block.name] = correct_in_block_dict
@@ -353,20 +364,22 @@ class XingApi:
                     if array_len == 0:
                         self._last_message = "입력 데이터 형식 오류"
                         return None
-                    response.body[res_info.in_blocks[0].name] = {'nrec':array_len}
+                    str_array_len = str(array_len).rjust(4, '0')
+                    response.body[res_info.in_blocks[0].name] = {'nrec':str_array_len}
                     o3127InBlock1 = []
                     indata_line = b""
-                    indata_line += str(array_len).rjust(4, '0').encode(self.enc)
+                    indata_line += str_array_len.encode(self.enc)
                     if res_info.is_attr:
                         indata_line += b" "
                     for mktgb, symbol in mktgb_symbols:
                         indata_line += mktgb.encode(self.enc)
                         if res_info.is_attr:
                             indata_line += b" "
-                        indata_line += symbol.ljust(16, ' ').encode(self.enc)
+                        aligned_symbol = symbol.ljust(16, ' ')
+                        indata_line += aligned_symbol.encode(self.enc)
                         if res_info.is_attr:
                             indata_line += b" "
-                        o3127InBlock1.append({'mktgb':mktgb, 'symbol':symbol})
+                        o3127InBlock1.append({'mktgb':mktgb, 'symbol':aligned_symbol.strip()})
                     response.body[res_info.in_blocks[1].name] = o3127InBlock1
                 else:
                     self._last_message = "invalid inputs type"
@@ -388,7 +401,6 @@ class XingApi:
         else:
             nRqID = self._module.ETK_Request(self._hwnd, tr_cd.encode(self.enc), indata_line, len(indata_line), cont_yn, cont_key.encode(self.enc), self.default_timeout)
         response.id = nRqID
-        response.ticks.append(time.perf_counter_ns() - start_time)
         if response.id < 0:
             self._last_message = f"[{response.id}] {self._get_error_message(response.id)}"
             return None
@@ -519,8 +531,11 @@ class XingApi:
         node = XingApi._asyncNode(response.id, callback)
         self._async_nodes.append(node)
         await node.wait()
-        response.ticks.append(time.perf_counter_ns() - start_time)
+        response.elapsed_ms = (time.perf_counter_ns() - start_time) / 1000000
         self._async_nodes.remove(node)
+        if node.async_result == -902:
+            self._last_message = "[-902] TIME_OUT"
+            return None
         self._last_message = f"[{response.rsp_cd}] {response.rsp_msg}"
         if response.id < 0:
             return None
@@ -564,21 +579,23 @@ class XingApi:
         in_blocks = res_info.in_blocks
         in_blocks_count = len(in_blocks)
         indata_line = b''
+        data_unit_len = 0
         if in_blocks_count == 1:
             in_block = res_info.in_blocks[0]
             in_block_field_count = len(in_block.fields)
             if in_block_field_count > 0:
                 field_inf = in_block.fields[0]
                 field_size = field_inf.size
+                data_unit_len = field_size
                 for i in range(in_datas_count):
                     enc_val = in_datas[i].encode(self.enc)
                     enc_val = enc_val.ljust(field_size, b' ')
                     indata_line += enc_val
 
         if advise:
-            ok = self._module.ETK_AdviseRealData(self._hwnd, tr_cd.encode(self.enc), indata_line, len(indata_line))
+            ok = self._module.ETK_AdviseRealData(self._hwnd, tr_cd.encode(self.enc), indata_line, data_unit_len)
         else:
-            ok = self._module.ETK_UnadviseRealData(self._hwnd, tr_cd.encode(self.enc), indata_line, len(indata_line))
+            ok = self._module.ETK_UnadviseRealData(self._hwnd, tr_cd.encode(self.enc), indata_line, data_unit_len)
 
         if not ok:
             err_code = self._get_last_error()
@@ -765,8 +782,6 @@ class XingApi:
             self.__event = asyncio.Event()
             self.hash_id = hashid
             self.async_evented : bool = False
-            self.async_code : str = ''
-            self.async_msg : str = ''
             self.async_result = 0
             self.callback = callback
 

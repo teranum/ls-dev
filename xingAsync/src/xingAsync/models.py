@@ -26,9 +26,6 @@ class ResponseData:
         self.tr_cd = ''
         ''' TR 코드 '''
 
-        self.id: int = 0
-        ''' 요청 ID '''
-
         self.cont_yn = False
         ''' 연속여부 '''
 
@@ -42,14 +39,23 @@ class ResponseData:
         ''' 응답메시지 '''
 
         self.body: dict[str, dict | list] = {}
-        ''' 응답 데이터 (inblock 포함) '''
+        '''
+        응답 데이터 (inblock 포함)
+        배열이면 list, 아니면 dict
+        '''
+
+        self.id: int = 0
+        ''' 요청 ID '''
+
+        self.elapsed_ms: float = 0.0
+        ''' 요청/응답 소요시간 (ms) '''
 
         self.res = None
         ''' 자원정보 '''
 
-        self.ticks: list[int] = []
-        ''' 요청/응답 소요시간 (ns) '''
-
 
     def __getitem__(self, key: str, /) -> dict | list | None: 
         return self.body.get(key, None)
+
+    def __str__(self) -> str:
+        return f'tr_cd=\'{self.tr_cd}\'\ncont_yn={self.cont_yn}\ncont_key=\'{self.cont_key}\'\nrsp_cd=\'{self.rsp_cd}\'\nrsp_msg=\'{self.rsp_msg}\'\nbody={self.body}\nelapsed_ms={self.elapsed_ms}'

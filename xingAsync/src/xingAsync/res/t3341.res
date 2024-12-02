@@ -17,14 +17,14 @@ BEGIN_FUNCTION_MAP
 	begin
 		순위,rank,rank,long,4;
 		기업명,hname,hname,char,20;
-		매출액증가율,salesgrowth,salesgrowth,long,12;
-		영업이익증가율,operatingincomegrowt,operatingincomegrowt,long,12;
-		경상이익증가율,ordinaryincomegrowth,ordinaryincomegrowth,long,12;
-		부채비율,liabilitytoequity,liabilitytoequity,long,12;
-		유보율,enterpriseratio,enterpriseratio,long,12;
-		EPS,eps,eps,long,12;
-		BPS,bps,bps,long,12;
-		ROE,roe,roe,long,12;
+		매출액증가율,salesgrowth,salesgrowth,float,12;
+		영업이익증가율,operatingincomegrowt,operatingincomegrowt,float,12;
+		경상이익증가율,ordinaryincomegrowth,ordinaryincomegrowth,float,12;
+		부채비율,liabilitytoequity,liabilitytoequity,float,12;
+		유보율,enterpriseratio,enterpriseratio,float,12;
+		EPS,eps,eps,float,12;
+		BPS,bps,bps,float,12;
+		ROE,roe,roe,float,12;
 		종목코드,shcode,shcode,char,6;
 		PER,per,per,float,13.2;
 		PBR,pbr,pbr,float,13.2;

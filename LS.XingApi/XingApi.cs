@@ -16,6 +16,7 @@ namespace LS.XingApi
         private const int WM_XING = 0x0400;
 
         private static bool _is_Logined;
+        private static string _user_id = string.Empty;
         private static bool _is_Simulation;
         private static List<AccountInfo> _accountInfos { get; } = [];
         private readonly Form _win32Window;
@@ -37,6 +38,8 @@ namespace LS.XingApi
         /// <summary>연결 여부</summary>
         public bool Logined => _is_Logined;
 
+        /// <summary>사용자 아이디</summary>
+        public string UserId => _user_id;
         /// <summary>모의투자 여부</summary>
         public bool IsSimulation => _is_Simulation;
 
@@ -433,14 +436,13 @@ namespace LS.XingApi
             }
 
             response.id = nRqID;
-            response.ticks.Add(stopwatch.ElapsedTicks);
 
             TaskCompletionSource tcs = new(new Tuple<int, Action<WPARAM, LPARAM>>(nRqID, callback));
             _task_srcs.Add(tcs);
             await tcs.Task;
             _task_srcs.Remove(tcs);
 
-            response.ticks.Add(stopwatch.ElapsedTicks);
+            response.elapsed_ms = stopwatch.ElapsedTicks / 10000.0;
             LastMessage = $"[{response.rsp_cd}] {response.rsp_msg}";
 
             if (response.id < 0)

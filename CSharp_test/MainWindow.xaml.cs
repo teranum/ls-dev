@@ -198,16 +198,7 @@ namespace CSharp_test
             StringBuilder sb = new();
             if (response is not null)
             {
-                sb.Append($"id: {response.id}, time(ms): ");
-                bool first = true;
-                foreach (var tick in response.ticks)
-                {
-                    if (!first)
-                        sb.Append(", ");
-                    sb.Append($", {tick / 10000.0}");
-                    first = false;
-                }
-                sb.AppendLine();
+                sb.AppendLine($"id: {response.id}, time(ms): {response.elapsed_ms:F4}");
                 foreach (var (key, value) in response.body)
                 {
                     if (value is IList list)

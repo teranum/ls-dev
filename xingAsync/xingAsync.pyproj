@@ -4,14 +4,14 @@
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>2b61bde3-bd81-4a96-8c74-65c0c03d8427</ProjectGuid>
     <ProjectHome>.</ProjectHome>
-    <StartupFile>secret\Qt-종합샘플.py</StartupFile>
+    <StartupFile>secret\ls-devcenter\ls-devcenter.py</StartupFile>
     <SearchPath>src;secret</SearchPath>
     <WorkingDirectory>
     </WorkingDirectory>
     <OutputPath>.</OutputPath>
     <Name>xingAsync</Name>
     <RootNamespace>xingAsync</RootNamespace>
-    <InterpreterId>MSBuild|env32|$(MSBuildProjectFullPath)</InterpreterId>
+    <InterpreterId>MSBuild|env64|$(MSBuildProjectFullPath)</InterpreterId>
     <IsWindowsApplication>False</IsWindowsApplication>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
@@ -23,16 +23,22 @@
     <EnableUnmanagedDebugging>false</EnableUnmanagedDebugging>
   </PropertyGroup>
   <ItemGroup>
+    <Folder Include="secret\ls-devcenter\" />
+    <Folder Include="secret\samples\" />
     <Folder Include="test\" />
     <Folder Include="secret\" />
     <Folder Include="src\" />
     <Folder Include="src\xingAsync\" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="secret\common.py" />
+    <Compile Include="secret\ls-devcenter\ls-devcenter.py" />
+    <Compile Include="secret\ls-devcenter\common.py" />
+    <Compile Include="secret\ls-devcenter\syntax.py" />
+    <Compile Include="secret\samples\00. 사용방법.py" />
+    <Compile Include="secret\samples\01. 로그인.py" />
+    <Compile Include="secret\samples\02. 계좌분류.py" />
+    <Compile Include="secret\samples\common.py" />
     <Compile Include="test\login.py" />
-    <Compile Include="secret\01. 로그인.py" />
-    <Compile Include="secret\Qt-종합샘플.py" />
     <Compile Include="src\xingAsync\async_api.py" />
     <Compile Include="src\xingAsync\models.py" />
     <Compile Include="src\xingAsync\native.py" />
