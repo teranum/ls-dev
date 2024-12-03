@@ -678,12 +678,14 @@ namespace LS.XingApi
             var in_datas = tr_key.Split([',']).ToList();
             var indata_line = new StringBuilder();
 
+            int unit_size = 0;
             if (resInfo.in_blocks.Count == 1)
             {
                 var in_block = resInfo.in_blocks[0];
                 if (in_block.fields.Count > 0)
                 {
                     var field = in_block.fields[0];
+                    unit_size = field.size;
                     if (in_datas.Count == 1)
                     {
                         var trim_data = in_datas[0].Trim();
@@ -714,11 +716,11 @@ namespace LS.XingApi
             bool bRet;
             if (advise)
             {
-                bRet = XingNative.ETK_AdviseRealData(Handle, tr_cd, indata_line.ToString(), indata_line.Length);
+                bRet = XingNative.ETK_AdviseRealData(Handle, tr_cd, indata_line.ToString(), unit_size);
             }
             else
             {
-                bRet = XingNative.ETK_UnadviseRealData(Handle, tr_cd, indata_line.ToString(), indata_line.Length);
+                bRet = XingNative.ETK_UnadviseRealData(Handle, tr_cd, indata_line.ToString(), unit_size);
             }
             LastMessage = bRet ? "Realtime 요청성공" : "Realtime 요청실패";
             return bRet;
