@@ -138,7 +138,7 @@ class XingApi:
         if self._module.ETK_IsConnected():
             self._module.ETK_Disconnect()
 
-    async def login(self, user_id: str, user_pwd: str, cert_pwd: str = "") -> bool:
+    async def login(self, user_id: str, user_pwd: str, cert_pwd: str = "", server_ip:str = "") -> bool:
         """
         서버에 로그인, 성공시 True 반환, 오류시 False 반환(last_message에 오류 메시지)
         cert_pwd가 비어있으면 시뮬레이션 모드
@@ -155,8 +155,10 @@ class XingApi:
         self._accounts.clear()
 
         XingApi._is_simulation = len(cert_pwd) == 0
+        if len(server_ip) == 0:
+            server_ip = self.simul_domain if self._is_simulation else self.real_domain
         if not self._module.ETK_IsConnected():
-            self._module.ETK_Connect(self._hwnd, self.simul_domain if self._is_simulation else self.real_domain, 20001, self.XM_MSG_BASE, -1, -1)
+            self._module.ETK_Connect(self._hwnd, server_ip, 20001, self.XM_MSG_BASE, -1, -1)
         if self._module.ETK_IsConnected():
             ret = self._module.ETK_Login(self._hwnd, user_id.encode(self.enc), user_pwd.encode(self.enc), cert_pwd.encode(self.enc), 0, False)
             if ret:

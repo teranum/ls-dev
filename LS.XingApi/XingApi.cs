@@ -77,9 +77,10 @@ namespace LS.XingApi
         /// <param name="userId">유저 아이디</param>
         /// <param name="password">HTS 패스워드</param>
         /// <param name="certPassword">공인인증 패스워드</param>
+        /// <param name="serverIp">서버아이피</param>
         /// <returns>ret: 0, 연결성공, 그외 오류코드</returns>
         /// <remarks>공인인증 패스워드 없는 경우, 모의서버로 로그인</remarks>
-        public async Task<bool> ConnectAsync(string userId, string password, string certPassword = "")
+        public async Task<bool> ConnectAsync(string userId, string password, string certPassword = "", string serverIp = "")
         {
             if (Logined)
             {
@@ -98,8 +99,13 @@ namespace LS.XingApi
 
             _is_Simulation = certPassword.Length == 0;
 
+            if (serverIp.Length == 0)
+            {
+                serverIp = _is_Simulation ? SIMUL_DOMAIN : REAL_DOMAIN;
+            }
+
             if (!XingNative.ETK_IsConnected())
-                XingNative.ETK_Connect(Handle, IsSimulation ? SIMUL_DOMAIN : REAL_DOMAIN, 20001, WM_XING, -1, -1);
+                XingNative.ETK_Connect(Handle, serverIp, 20001, WM_XING, -1, -1);
 
             if (XingNative.ETK_IsConnected())
             {
