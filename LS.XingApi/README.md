@@ -2,9 +2,8 @@
 
 LS증권 XingApi (DLL모드) 를 C#에서 사용하기 위한 Wrapper입니다.
 
-## 개발환경
+### 개발환경
 Visual Studio 2022, NET8.0
-<br/>
  
 ### 1. 클래스 프로퍼티/메소드/이벤트
 ```csharp
