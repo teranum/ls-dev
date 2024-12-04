@@ -1,4 +1,4 @@
-# [![NuGet version](https://badge.fury.io/nu/eBEST.OpenApi.png)](https://badge.fury.io/nu/eBEST.OpenApi) LS.XingApi C# Wrapper
+# [![NuGet version](https://badge.fury.io/nu/LS.XingApi.png)](https://badge.fury.io/nu/LS.XingApi) LS.XingApi C# Wrapper
 
 LS증권 XingApi (DLL모드) 를 C#에서 사용하기 위한 Wrapper입니다.
 
