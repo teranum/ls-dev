@@ -53,6 +53,7 @@ namespace LS.XingApi.Native
             }
 
             ApiFolder = apiFolder;
+            var save_dir = Directory.GetCurrentDirectory();
             Directory.SetCurrentDirectory(ApiFolder);
             nint handle;
             if (is_64bit)
@@ -80,6 +81,7 @@ namespace LS.XingApi.Native
             {
                 handle = LoadLibrary(Path.Combine(ApiFolder, XING_DLL));
             }
+            Directory.SetCurrentDirectory(save_dir);
             if (handle != 0)
             {
                 _ETK_Connect = GetDelegateFromFuncName<ETK_Connect_Handler>();

@@ -1,6 +1,6 @@
 ﻿import os, asyncio, ctypes, time, win32gui, win32api
 from .models import AccountInfo, ResponseData
-from .native import XING_MSG, RECV_FLAG, MSG_PACKET, RECV_PACKET, REAL_RECV_PACKET
+from .native import LINKDATA_RECV_MSG, XING_MSG, RECV_FLAG, MSG_PACKET, RECV_PACKET, REAL_RECV_PACKET
 from .resource import FieldSpec, ResourceManager
 
 class XingApi:
@@ -613,6 +613,28 @@ class XingApi:
     # def unadvise_realtime(self, tr_cd:str, in_datas:str):
     #     return self.realtime(tr_cd, in_datas, False)
 
+    # def request_link_to_hts(self, link_name: str, link_data: str):
+    #     """
+    #     API에서 HTS로의 연동을 원할 때 요청합니다.
+    #     """
+    #     if not self.logined:
+    #         self._last_message = "로그인 후 사용 가능합니다."
+    #         return False
+    #     return True if self._module.ETK_RequestLinkToHTS(self._hwnd, link_name.encode(self.enc), link_data.encode(self.enc), "".encode(self.enc)) > 0 else False
+
+    # def link_from_hts(self, advise: bool):
+    #     """
+    #     HTS에서 API로의 연동을 등록/해지 합니다.
+    #     """
+    #     if not self.logined:
+    #         self._last_message = "로그인 후 사용 가능합니다."
+    #         return False
+    #     if advise:
+    #         self._module.ETK_AdviseLinkFromHTS(self._hwnd)
+    #     else:
+    #         self._module.ETK_UnAdviseLinkFromHTS(self._hwnd)
+    #     return True
+
     def get_requests_count(self, tr_cd: str):
         """
         TR의 초당 전송 가능 횟수, Base 시간(초단위), TR의 10분당 제한 건수, 10분내 요청한 해당 TR의 총 횟수를 반환합니다.
@@ -705,6 +727,14 @@ class XingApi:
 
                 case XING_MSG.XM_RECEIVE_LINK_DATA:
                     if wparam == RECV_FLAG.LINK_DATA:
+                        unpack_result = ctypes.cast(lparam, ctypes.POINTER(LINKDATA_RECV_MSG)).contents
+
+                        col_datas = {}
+                        col_datas["sLinkName"] = unpack_result.sLinkName.decode(self.enc).strip()
+                        col_datas["sLinkData"] = unpack_result.sLinkData.decode(self.enc).strip()
+                        col_datas["sFiller"] = unpack_result.sFiller.decode(self.enc).strip()
+                        self.on_realtime.emit_signal("LinkData", "", col_datas)
+
                         self._module.ETK_ReleaseMessageData(lparam)
 
                 case XING_MSG.XM_RECEIVE_REAL_DATA | XING_MSG.XM_RECEIVE_REAL_DATA_SEARCH | XING_MSG.XM_RECEIVE_REAL_DATA_CHART:

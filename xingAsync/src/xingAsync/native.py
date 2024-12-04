@@ -39,7 +39,7 @@ class RECV_FLAG:
     RELEASE_DATA: int = 4
     ###
     TIME_OUT: int = 7,
-    LINK_DAT: int = 10,
+    LINK_DATA: int = 10,
 
 class RECV_PACKET(ctypes.Structure):
     _pack_ = 1
@@ -84,4 +84,12 @@ class REAL_RECV_PACKET(ctypes.Structure):
         ('_szRegKey', ctypes.c_char),
         ('nDataLength', ctypes.c_int),
         ('pszData', ctypes.c_voidp)
+    ]
+
+class LINKDATA_RECV_MSG(ctypes.Structure):
+    _pack_ = 1
+    _fields_ = [
+        ('sLinkName', ctypes.c_char * 32),
+        ('sLinkData', ctypes.c_char * 32),
+        ('sFiller', ctypes.c_char * 64),
     ]

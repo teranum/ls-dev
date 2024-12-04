@@ -28,7 +28,7 @@
         public ResInfo res = null!;
 
         /// <summary>elapsed elapsed_ms</summary>
-        public double elapsed_ms ;
+        public double elapsed_ms;
 
         /// <summary>Get the elements in dictionary</summary>
         public object? this[string key] => body[key];

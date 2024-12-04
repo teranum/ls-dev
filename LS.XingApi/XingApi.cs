@@ -113,13 +113,6 @@ namespace LS.XingApi
                 if (ret)
                 {
                     var code_msg = (string.Empty, string.Empty);
-                    //var node = new AsyncNode(0, (wParam, lParam) =>
-                    //{
-                    //    code_msg = (PtrToStringAnsi(wParam), PtrToStringAnsi(lParam));
-                    //});
-                    //_async_nodes.Add(node);
-                    //await node.Wait();
-                    //_async_nodes.Remove(node);
 
                     TaskCompletionSource tcs = new(new Tuple<int, Action<WPARAM, LPARAM>>(0,
                         (wParam, lParam) =>
@@ -395,7 +388,7 @@ namespace LS.XingApi
                         for (int i = 0; i < in_symbols_count; i++)
                         {
                             var in_symbol = in_symbols[i].ToString()!.Trim().PadLeft(16);
-                            o3127InBlock1.Append(in_symbol);
+                            o3127InBlock1.Add(in_symbol);
                             indata_line.Append(in_symbol);
                             if (res_info.is_attr)
                                 indata_line.Append(' ');
@@ -634,7 +627,7 @@ namespace LS.XingApi
                 if (double.TryParse(value, out var d))
                 {
                     if (field_spec.dot_value > 0 && !value.Contains('.'))
-                        d = d / field_spec.dot_value;
+                        d /= field_spec.dot_value;
                     return d;
                 }
                 return value;
@@ -745,6 +738,37 @@ namespace LS.XingApi
             return XingNative.ETK_RemoveService(Handle, szCode, szData);
         }
 
+        ///// <summary> API에서 HTS로의 연동을 원할 때 요청합니다. </summary>
+        //public bool RequestLinkToHTS(string szLinkName, string szData)
+        //{
+        //    if (!Logined)
+        //    {
+        //        LastMessage = "로그인 후 사용 가능합니다.";
+        //        return false;
+        //    }
+        //    return XingNative.ETK_RequestLinkToHTS(Handle, szLinkName, szData, string.Empty) > 0;
+        //}
+
+        ///// <summary> HTS에서 API로의 연동을 등록/해지 합니다. </summary>
+        //public bool LinkFromHTS(bool advise)
+        //{
+        //    if (!Logined)
+        //    {
+        //        LastMessage = "로그인 후 사용 가능합니다.";
+        //        return false;
+        //    }
+
+        //    if (advise)
+        //    {
+        //        XingNative.ETK_AdviseLinkFromHTS(Handle);
+        //    }
+        //    else
+        //    {
+        //        XingNative.ETK_UnAdviseLinkFromHTS(Handle);
+        //    }
+        //    return true;
+        //}
+
         private void WndProc(IntPtr hwnd, uint msg, IntPtr wParam, IntPtr lParam)
         {
             // Handle messages...
@@ -792,7 +816,7 @@ namespace LS.XingApi
                             case RECEIVE_FLAGS.REQUEST_DATA:
                                 {
                                     int nRqID = Marshal.PtrToStructure<int>(lParam);
-                                    var match_src = _task_srcs.Find(x => ((Tuple<int, Action<WPARAM,LPARAM>>) x.Task.AsyncState!).Item1 == nRqID);
+                                    var match_src = _task_srcs.Find(x => ((Tuple<int, Action<WPARAM, LPARAM>>)x.Task.AsyncState!).Item1 == nRqID);
                                     if (match_src is not null)
                                     {
                                         var state = (Tuple<int, Action<WPARAM, LPARAM>>)match_src.Task.AsyncState!;
@@ -859,9 +883,21 @@ namespace LS.XingApi
                         // HTS -> API로 연동을 등록하면, HTS에서 연동 정보가 발생시에 호출, 사용방식은 XM_RECEIVE_REAL_DATA 수신과 동일
                         // WPARAM: LINK_DATA
                         // LPARAM: LINKDATRRA_RECV_MSG 구조체 데이터
-                        //var data = new LINKDATA_RECV_MSG_CLASS(lParam);
                         if (wParam == (nint)RECEIVE_FLAGS.LINK_DATA)
+                        {
+                            var packet = Marshal.PtrToStructure<LINKDATA_RECV_MSG>(lParam);
+
+                            var col_datas = new Dictionary<string, object>(3)
+                            {
+                                ["sLinkName"] = ByteToString(packet.sLinkName),
+                                ["sLinkData"] = ByteToString(packet.sLinkData),
+                                ["sFiller"] = ByteToString(packet.sFiller),
+                            };
+
+                            OnRealtimeEvent?.Invoke(this, new("LinkData", string.Empty, col_datas));
+
                             XingNative.ETK_ReleaseMessageData(lParam);
+                        }
                     }
                     break;
                 case XM.XM_RECEIVE_REAL_DATA:

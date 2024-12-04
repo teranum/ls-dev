@@ -126,6 +126,7 @@ namespace CSharp_test
 
                 case "업종-차트조회":
                     {
+                        var tr_cd = "t4203"; // 업종차트(종합)
                         var inputs = new Dictionary<string, object>
                         {
                             ["shcode"] = "001",     // 업종코드 (001: 종합...)
@@ -133,7 +134,6 @@ namespace CSharp_test
                             ["qrycnt"] = 100,       // 조회건수 (1 이상 500 이하값만 유효)
                             ["tdgb"] = "0",         // 당일구분(0:전체1:당일만)
                         };
-                        var tr_cd = "t4203"; // 업종차트(종합)
                         var response = await _api.RequestAsync(tr_cd, inputs);
                         AppendResult($"{tr_cd}: {_api.LastMessage}");
                         if (response is not null)
@@ -145,6 +145,7 @@ namespace CSharp_test
 
                 case "주식-차트조회":
                     {
+                        var tr_cd = "t8410"; // 주식챠트(일주월년)(API용)
                         var inputs = new Dictionary<string, object>
                         {
                             ["shcode"] = "005930",  // 삼성전자
@@ -154,7 +155,6 @@ namespace CSharp_test
                             ["comp_yn"] = "Y",      // 압축여부(Y:압축N:비압축)
                             ["sujung"] = "Y",       // 수정주가여부(Y:적용N:비적용)
                         };
-                        var tr_cd = "t8410"; // 주식챠트(일주월년)(API용)
                         var response = await _api.RequestAsync(tr_cd, inputs);
                         AppendResult($"{tr_cd}: {_api.LastMessage}");
                         if (response is not null)
@@ -166,8 +166,8 @@ namespace CSharp_test
 
                 case "주식-현재가":
                     {
-                        var inputs = "005930";
                         var tr_cd = "t1102";
+                        var inputs = "005930";
                         var response = await _api.RequestAsync(tr_cd, inputs);
                         AppendResult($"{tr_cd}: {_api.LastMessage}");
                         if (response is not null)
@@ -180,8 +180,8 @@ namespace CSharp_test
                 case "2-주식-현재가":
                     {
                         var other_api = new XingApi();
-                        var inputs = "005930";
                         var tr_cd = "t1102";
+                        var inputs = "005930";
                         var response = await other_api.RequestAsync(tr_cd, inputs);
                         AppendResult($"{tr_cd}: {other_api.LastMessage}");
                         if (response is not null)
@@ -244,7 +244,7 @@ namespace CSharp_test
                     sb.Append($"\"{item.Key}\": {item.Value}");
                 first = false;
             }
-            sb.Append("}");
+            sb.Append('}');
             return sb.ToString();
         }
     }
