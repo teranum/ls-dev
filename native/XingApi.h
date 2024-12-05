@@ -31,6 +31,10 @@ namespace xing
 
 	class XingApi : private IXingApi
 	{
+		LPCSTR real_domain = "api.ls-sec.co.kr";
+		LPCSTR simul_domain = "demo.ls-sec.co.kr";
+		const int serveer_port = 20001;
+
 		typedef BOOL(__stdcall* FP_XING64_Init) (LPCTSTR);
 	private:
 		HWND m_hWnd;
@@ -53,10 +57,18 @@ namespace xing
 			m_hWnd = hWnd;
 
 #ifdef _WIN64
+			TCHAR szCurDir[MAX_PATH];
+			GetCurrentDirectory(MAX_PATH, szCurDir);
+			SetCurrentDirectoryA(szXingFolder);
 			bool is_loaded = IXingApi::Init("xingAPI64.dll");
 			if (!is_loaded)
 			{
-				last_message = "Already logined!";
+				is_loaded = IXingApi::Init("xingAPI64.dll");
+			}
+			SetCurrentDirectory(szCurDir);
+			if (!is_loaded)
+			{
+				last_message = "Failed to load xing64.!";
 				return false;
 			}
 			FP_XING64_Init XING64_Init = (FP_XING64_Init)GetProcAddress(m_hModule, "XING64_Init");
@@ -82,7 +94,7 @@ namespace xing
 			return msg;
 		}
 
-		bool login(LPCSTR user_id, LPCSTR user_pwd, LPCSTR crt_pwd, int server_type, BOOL show_crt_pwd) {
+		bool login(LPCSTR user_id, LPCSTR user_pwd, LPCSTR crt_pwd, LPCSTR server_ip = nullptr) {
 			if (is_logined) {
 				last_message = "Already logined!";
 				return false;
@@ -94,13 +106,17 @@ namespace xing
 			}
 
 			bool is_simulation = crt_pwd == nullptr || strlen(crt_pwd) == 0;
-			auto ret = ETK_Connect(m_hWnd, is_simulation ? simul_domain : real_domain, serveer_port, WM_USER, -1, -1);
+			if (server_ip == nullptr)
+			{
+				server_ip = is_simulation ? simul_domain : real_domain;
+			}
+			auto ret = ETK_Connect(m_hWnd, server_ip, serveer_port, WM_USER, -1, -1);
 			if (!ret) {
 				last_message = "Failed to connect!";
 				return false;
 			}
 
-			ret = ETK_Login(m_hWnd, user_id, user_pwd, crt_pwd, server_type, show_crt_pwd);
+			ret = ETK_Login(m_hWnd, user_id, user_pwd, crt_pwd, 0, false);
 			if (!ret) {
 				last_message = "Failed to login!";
 				ETK_Disconnect();
