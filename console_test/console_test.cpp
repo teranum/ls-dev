@@ -24,7 +24,7 @@ void xingapi_test(HWND hWnd)
     }
 
     // login
-    auto ret = api.login(user_id, user_pwd, crt_pwd, 0, false);
+    auto ret = api.login(user_id, user_pwd, crt_pwd);
     if (!ret) {
         std::cerr << "Failed to login: " << api.last_message << std::endl;
         return;

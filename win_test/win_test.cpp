@@ -107,7 +107,7 @@ INT_PTR CALLBACK DlgProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
         }
         else
         {
-            OutputLog("Failed to load xingAPI.dll!");
+            OutputLog(api.last_message);
         }
     }
     return (INT_PTR)TRUE;
@@ -130,7 +130,7 @@ INT_PTR CALLBACK DlgProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 		{
 			EnableWindow(GetDlgItem(hDlg, IDC_BUTTON_LOGIN), FALSE);
             OutputLog("로그인 요청중...");
-			auto ret = api.login(user_id, user_pwd, crt_pwd, 0, false);
+			auto ret = api.login(user_id, user_pwd, crt_pwd);
 			if (!ret) {
 				std::string msg = "Failed to login: " + api.last_message;
                 OutputLog(msg);

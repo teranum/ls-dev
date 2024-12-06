@@ -2,10 +2,6 @@
 
 namespace xing
 {
-	LPCSTR real_domain = "api.ls-sec.co.kr";
-	LPCSTR simul_domain = "demo.ls-sec.co.kr";
-	const int serveer_port = 20001;
-
 	class IXingApi
 	{
 	public:
@@ -48,14 +44,16 @@ namespace xing
 		typedef void(__stdcall* FP_ETK_GetClientIP) (LPTSTR);
 		typedef void(__stdcall* FP_ETK_GetServerName) (LPTSTR);
 		typedef void(__stdcall* FP_ETK_GetAPIPath) (LPTSTR);
+		typedef void(__stdcall* FP_ETK_GetProcBranchNo) (LPTSTR);
 
 		typedef void(__stdcall* FP_SETHEADERINFO) (LPCTSTR, LPCTSTR);
 		typedef void(__stdcall* FP_SETUSEAPIVER) (LPCTSTR);
 		typedef void(__stdcall* FP_ETK_SetMode) (LPCTSTR, LPCTSTR);
 
-		typedef void(__stdcall* FP_ETK_GetProcBranchNo) (LPTSTR);
+
 		typedef BOOL(__stdcall* FP_ETK_GetUseOverFuture) ();
 		typedef BOOL(__stdcall* FP_ETK_GetUseFX) ();
+		typedef BOOL(__stdcall* FP_ETK_GetUseOverStock) ();
 
 		typedef int(__stdcall* FP_ETK_GetTRCountPerSec) (LPCTSTR);
 		typedef int(__stdcall* FP_ETK_GetTRCountBaseSec) (LPCTSTR);
@@ -67,9 +65,9 @@ namespace xing
 		typedef int(__stdcall* FP_ETK_RequestService) (HWND, LPCTSTR, LPCTSTR);
 		typedef int(__stdcall* FP_ETK_RemoveService) (HWND, LPCTSTR, LPCTSTR);
 
-		typedef int(__stdcall* FP_REQUESTLINKTOHTS) (HWND, LPCTSTR, LPCTSTR, LPCTSTR);
-		typedef void(__stdcall* FP_ADVISELINKFROMHTS) (HWND);
-		typedef void(__stdcall* FP_UNADVISELINKFROMHTS) (HWND);
+		typedef int(__stdcall* FP_ETK_RequestLinkToHTS) (HWND, LPCTSTR, LPCTSTR, LPCTSTR);
+		typedef void(__stdcall* FP_ETK_AdviseLinkFromHTS) (HWND);
+		typedef void(__stdcall* FP_ETK_UnAdviseLinkFromHTS) (HWND);
 
 		typedef int(__stdcall* FP_DECOMPRESS) (LPCTSTR, LPCTSTR, int);
 		typedef BOOL(__stdcall* FP_ISCHARTLIB) ();
@@ -79,10 +77,6 @@ namespace xing
 		typedef int(__stdcall* FP_RequestDataEx) (int a1, int a2, int a3, size_t Size, int a5, int a6, int a7, int a8, int a9, int a10, int a11, int a12, int a13);
 		typedef int(__stdcall* FP_SetProgramOrder) (int a1);
 		typedef int(__stdcall* FP_GetProgramOrder) ();
-
-		typedef BOOL(__stdcall* FP_ETK_GetUseOverStock) ();
-
-
 
 		FP_ETK_Connect					ETK_Connect;
 		FP_ETK_IsConnected				ETK_IsConnected;
@@ -131,9 +125,9 @@ namespace xing
 		FP_ETK_RequestService			ETK_RequestService;
 		FP_ETK_RemoveService			ETK_RemoveService;
 
-		FP_REQUESTLINKTOHTS			m_fpRequestLinkToHTS;
-		FP_ADVISELINKFROMHTS		m_fpAdviseLinkFromHTS;
-		FP_UNADVISELINKFROMHTS		m_fpUnAdviseLinkFromHTS;
+		FP_ETK_RequestLinkToHTS			ETK_RequestLinkToHTS;
+		FP_ETK_AdviseLinkFromHTS		ETK_AdviseLinkFromHTS;
+		FP_ETK_UnAdviseLinkFromHTS		ETK_UnAdviseLinkFromHTS;
 
 		FP_DECOMPRESS				m_fpDecompress;
 		FP_ISCHARTLIB				m_fpIsChartLib;
@@ -207,9 +201,9 @@ namespace xing
 			ETK_RequestService = (FP_ETK_RequestService)GetProcAddress(m_hModule, "ETK_RequestService");
 			ETK_RemoveService = (FP_ETK_RemoveService)GetProcAddress(m_hModule, "ETK_RemoveService");
 
-			m_fpRequestLinkToHTS = (FP_REQUESTLINKTOHTS)GetProcAddress(m_hModule, "ETK_RequestLinkToHTS");
-			m_fpAdviseLinkFromHTS = (FP_ADVISELINKFROMHTS)GetProcAddress(m_hModule, "ETK_AdviseLinkFromHTS");
-			m_fpUnAdviseLinkFromHTS = (FP_UNADVISELINKFROMHTS)GetProcAddress(m_hModule, "ETK_UnAdviseLinkFromHTS");
+			ETK_RequestLinkToHTS = (FP_ETK_RequestLinkToHTS)GetProcAddress(m_hModule, "ETK_RequestLinkToHTS");
+			ETK_AdviseLinkFromHTS = (FP_ETK_AdviseLinkFromHTS)GetProcAddress(m_hModule, "ETK_AdviseLinkFromHTS");
+			ETK_UnAdviseLinkFromHTS = (FP_ETK_UnAdviseLinkFromHTS)GetProcAddress(m_hModule, "ETK_UnAdviseLinkFromHTS");
 
 			m_fpDecompress = (FP_DECOMPRESS)GetProcAddress(m_hModule, "ETK_Decompress");
 			m_fpIsChartLib = (FP_ISCHARTLIB)GetProcAddress(m_hModule, "ETK_IsChartLib");
@@ -285,6 +279,7 @@ namespace xing
 		MESSAGE_DATA = 2,
 		SYSTEM_ERROR_DATA = 3,
 		RELEASE_DATA = 4,
+		LINK_DATA = 10,
 	};
 
 	// Structure Á¤ÀÇ
