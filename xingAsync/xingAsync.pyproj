@@ -6,7 +6,7 @@
     <ProjectHome>.</ProjectHome>
     <StartupFile>
     </StartupFile>
-    <SearchPath>src;secret</SearchPath>
+    <SearchPath>src</SearchPath>
     <WorkingDirectory>
     </WorkingDirectory>
     <OutputPath>.</OutputPath>
