@@ -227,196 +227,145 @@ namespace LS.XingApi
             };
 
             var inblocks_count = res_info.in_blocks.Count;
-            var is_heade_A = res_info.headtype.Equals("A");
-            var is_heade_B = res_info.headtype.Equals("B");
-            var indata_line = new StringBuilder();
-            if (inblocks_count == 1)
+            if (in_datas is IDictionary in_dict)
             {
-                var in_block = res_info.in_blocks[0];
-                var in_fields = in_block.fields;
-                var in_block_field_count = in_fields.Count;
-                var aligned_in_block_datas = new string[in_block_field_count];
-                var correct_in_block_dict = new Dictionary<string, string>();
-                (string value, string error) get_correct_field_value(FieldSpec field, string in_str)
+                if (inblocks_count != 1)
                 {
-                    if (in_str is null)
-                        return (string.Empty, "Value is null.");
-                    var size = field.size;
-                    if (size == 0)
-                        return (in_str, string.Empty);
-                    if (field.type == FieldSpec.VarType.STRING)
-                    {
-                        if (in_str.Length > size)
-                            return (string.Empty, "length is over.");
-                        return (in_str.PadRight(size, ' '), string.Empty);
-                    }
-                    if (field.type == FieldSpec.VarType.INT || field.type == FieldSpec.VarType.LONG)
-                    {
-                        if (in_str.Length == 0)
-                            in_str = "0";
-                        if (long.TryParse(in_str, out long int_val))
-                        {
-                            var conv_str = int_val.ToString();
-                            if (conv_str.Length > size)
-                                return (string.Empty, "length is over.");
-                            return (conv_str.PadLeft(size, '0'), string.Empty);
-                        }
-                        return (string.Empty, "Value is not integer.");
-                    }
-                    if (field.type == FieldSpec.VarType.DOUBLE)
-                    {
-                        if (in_str.Length == 0)
-                            in_str = "0";
-                        if (double.TryParse(in_str, out double float_val))
-                        {
-                            var conv_str = is_heade_B
-                                ? float_val.ToString($"F{field.size}")
-                                : float_val.ToString($"F{field.size}").Replace(".", string.Empty);
-                            if (conv_str.Length > size)
-                                return (string.Empty, "length is over.");
-                            return (conv_str.PadLeft(size, '0'), string.Empty);
-                        }
-                        return (string.Empty, "Value is not float.");
-                    }
-                    return (string.Empty, "invalid type");
-                }
-
-                if (in_datas is IDictionary in_dict)
-                {
-                    for (int i = 0; i < in_block_field_count; i++)
-                    {
-                        var field = in_fields[i];
-                        string in_value_str;
-                        if (in_dict.Contains(field.name))
-                        {
-                            in_value_str = in_dict[field.name]!.ToString()!.Trim();
-                        }
-                        else
-                        {
-                            in_value_str = string.Empty;
-                        }
-                        var (correct_value, error) = get_correct_field_value(field, in_value_str);
-                        if (error.Length > 0)
-                        {
-                            LastMessage = $"{field.name}: {error}";
-                            return null;
-                        }
-                        aligned_in_block_datas[i] = correct_value;
-                        correct_in_block_dict.Add(field.name, correct_value.Trim());
-                    }
-                }
-                else if (in_datas is IList in_list)
-                {
-                    var in_list_count = in_list.Count;
-                    for (int i = 0; i < in_block_field_count; i++)
-                    {
-                        var field = in_fields[i];
-                        string in_value_str;
-                        if (i < in_list_count)
-                        {
-                            in_value_str = in_list[i]!.ToString()!.Trim();
-                        }
-                        else
-                        {
-                            in_value_str = string.Empty;
-                        }
-                        var (correct_value, error) = get_correct_field_value(field, in_value_str);
-                        if (error.Length > 0)
-                        {
-                            LastMessage = $"{field.name}: {error}";
-                            return null;
-                        }
-                        aligned_in_block_datas[i] = correct_value;
-                        correct_in_block_dict.Add(field.name, correct_value);
-                    }
-                }
-                else if (in_datas is IEnumerable in_Enumarable)
-                {
-                    var in_enumable_list = in_Enumarable.Cast<object>().ToList();
-                    var in_list_count = in_enumable_list.Count;
-                    for (int i = 0; i < in_block_field_count; i++)
-                    {
-                        var field = in_fields[i];
-                        string in_value_str;
-                        if (i < in_list_count)
-                        {
-                            in_value_str = in_enumable_list[i]!.ToString()!.Trim();
-                        }
-                        else
-                        {
-                            in_value_str = string.Empty;
-                        }
-                        var (correct_value, error) = get_correct_field_value(field, in_value_str);
-                        if (error.Length > 0)
-                        {
-                            LastMessage = $"{field.name}: {error}";
-                            return null;
-                        }
-                        aligned_in_block_datas[i] = correct_value;
-                        correct_in_block_dict.Add(field.name, correct_value);
-                    }
-                }
-                else
-                {
-                    LastMessage = "inblock data type error.";
+                    LastMessage = "해당 TR의 딕셔너리 입력은 현재버전 지원 불가.";
                     return null;
                 }
-
-                response.body[in_block.name] = correct_in_block_dict;
-
-                foreach (var item in aligned_in_block_datas)
+                var in_block = res_info.in_blocks[0];
+                var list_datas = new List<object>(in_block.fields.Count);
+                for (int i = 0; i < in_block.fields.Count; i++)
                 {
-                    indata_line.Append(item);
-                    if (res_info.is_attr)
-                        indata_line.Append(' ');
-                }
-            }
-            else if (inblocks_count == 2)
-            {
-                if (response.tr_cd.Equals("o3127")) // 해외선물옵션관심종목조회(o3127)-API용
-                {
-                    // 입력 포멧: "F선물코드1, F선물코드2, O옵션코드1, O옵션코드2..."
-                    if (in_datas is IList<object> in_symbols)
+                    var field = in_block.fields[i];
+                    if (in_dict.Contains(field.name))
                     {
-                        var in_symbols_count = in_symbols.Count;
-                        if (in_symbols_count == 0)
-                        {
-                            LastMessage = "입력 데이터가 없습니다.";
-                            return null;
-                        }
-                        var o3127InBlock1 = new List<string>();
-                        for (int i = 0; i < in_symbols_count; i++)
-                        {
-                            var in_symbol = in_symbols[i].ToString()!.Trim().PadLeft(16);
-                            o3127InBlock1.Add(in_symbol);
-                            indata_line.Append(in_symbol);
-                            if (res_info.is_attr)
-                                indata_line.Append(' ');
-                        }
-                        response.body["o3127InBlock1"] = o3127InBlock1;
+                        list_datas.Add(in_dict[field.name]!);
                     }
                     else
                     {
-                        LastMessage = "입력 데이터 형식 오류.";
-                        return null;
+                        list_datas.Add(string.Empty);
                     }
+                }
+
+                in_datas = list_datas;
+            }
+
+            if (in_datas is not IList in_list)
+            {
+
+                if (in_datas is IEnumerable in_Enumarable)
+                {
+                    in_list = in_Enumarable.Cast<object>().ToList();
                 }
                 else
                 {
-                    LastMessage = $"{response.tr_cd}: 현재 버전에서 지원하지 않습니다.";
+                    LastMessage = "입력 데이터 타입 오류.";
                     return null;
                 }
             }
-            else
-            {
-                if (inblocks_count > 2)
-                {
-                    LastMessage = "자원정보 inblock개수가 2 이상입니다, 현재버전 지원 불가.";
-                    return null;
-                }
 
-                LastMessage = "자원정보에 inblock이 없습니다, 현재버전 지원 불가.";
-                return null;
+            var in_datas_count = in_list.Count;
+            var in_datas_index = 0;
+
+            var is_heade_A = res_info.headtype.Equals("A");
+            var is_heade_B = res_info.headtype.Equals("B");
+            var indata_line = new StringBuilder();
+
+            foreach (var inblock in res_info.in_blocks)
+            {
+                var list_inblock_datas = new List<Dictionary<string, string>>(inblocks_count);
+                do
+                {
+                    var correct_in_block_dict = new Dictionary<string, string>();
+                    foreach (var field in inblock.fields)
+                    {
+                        string in_value_str;
+                        if (in_datas_index < in_datas_count)
+                        {
+                            in_value_str = in_list[in_datas_index]!.ToString()!.Trim();
+                        }
+                        else
+                        {
+                            in_value_str = string.Empty;
+                        }
+
+                        var (correct_value, error) = get_correct_field_value(field, in_value_str);
+                        if (error.Length > 0)
+                        {
+                            LastMessage = $"{field.name}: {error}";
+                            return null;
+                        }
+
+                        indata_line.Append(correct_value);
+                        if (res_info.is_attr)
+                            indata_line.Append(' ');
+
+                        in_datas_index += 1;
+                        correct_in_block_dict.Add(field.name, correct_value);
+                    }
+
+                    if (inblock.is_occurs)
+                    {
+                        list_inblock_datas.Add(correct_in_block_dict);
+                    }
+                    else
+                    {
+                        response.body[inblock.name] = correct_in_block_dict;
+                        break;
+                    }
+
+                } while (true);
+
+                if (inblock.is_occurs)
+                {
+                    response.body[inblock.name] = list_inblock_datas;
+                }
+            }
+
+            (string value, string error) get_correct_field_value(FieldSpec field, string in_str)
+            {
+                if (in_str is null)
+                    return (string.Empty, "Value is null.");
+                var size = field.size;
+                if (size == 0)
+                    return (in_str, string.Empty);
+                if (field.type == FieldSpec.VarType.STRING)
+                {
+                    if (in_str.Length > size)
+                        return (string.Empty, "length is over.");
+                    return (in_str.PadRight(size, ' '), string.Empty);
+                }
+                if (field.type == FieldSpec.VarType.INT || field.type == FieldSpec.VarType.LONG)
+                {
+                    if (in_str.Length == 0)
+                        in_str = "0";
+                    if (long.TryParse(in_str, out long int_val))
+                    {
+                        var conv_str = int_val.ToString();
+                        if (conv_str.Length > size)
+                            return (string.Empty, "length is over.");
+                        return (conv_str.PadLeft(size, '0'), string.Empty);
+                    }
+                    return (string.Empty, "Value is not integer.");
+                }
+                if (field.type == FieldSpec.VarType.DOUBLE)
+                {
+                    if (in_str.Length == 0)
+                        in_str = "0";
+                    if (double.TryParse(in_str, out double float_val))
+                    {
+                        var conv_str = is_heade_B
+                            ? float_val.ToString($"F{field.size}")
+                            : float_val.ToString($"F{field.size}").Replace(".", string.Empty);
+                        if (conv_str.Length > size)
+                            return (string.Empty, "length is over.");
+                        return (conv_str.PadLeft(size, '0'), string.Empty);
+                    }
+                    return (string.Empty, "Value is not float.");
+                }
+                return (string.Empty, "invalid type");
             }
 
             LastMessage = string.Empty;
