@@ -183,6 +183,22 @@ class ResourceManager:
         self._user_folder = os.path.dirname(os.path.abspath(__main__.__file__))
         self._xing_folder = xing_folder
 
+        # ELW관련 중복네임 파일들은 미리 로드
+        if self._resources.get("h2_", None) is None:
+            self.set_from_filepath(self._package_folder + "\\res\\h2_4ELW.res")
+        if self._resources.get("h3_", None) is None:
+            self.set_from_filepath(self._package_folder + "\\res\\h3_4ELW.res")
+        if self._resources.get("k1_", None) is None:
+            self.set_from_filepath(self._package_folder + "\\res\\k1_4ELW.res")
+        if self._resources.get("s2_", None) is None:
+            self.set_from_filepath(self._package_folder + "\\res\\s2_4ELW.res")
+        if self._resources.get("s3_", None) is None:
+            self.set_from_filepath(self._package_folder + "\\res\\s3_4ELW.res")
+        if self._resources.get("s4_", None) is None:
+            self.set_from_filepath(self._package_folder + "\\res\\s4_ELW.res")
+        if self._resources.get("Ys3", None) is None:
+            self.set_from_filepath(self._package_folder + "\\res\\Ys3_4ELW.res")
+
     def set_from_text(self, text: str) :
         res_info = ResInfo()
         res_info.from_text(text)
@@ -244,9 +260,9 @@ if __name__ == "__main__":
     infos = resManager._resources
 
     for key, value in infos.items():
-        # # check in_blocks count
-        # if len(value.in_blocks) > 1:
-        #     print(f"{value.tr_cd}: {value.tr_desc} in_blocks count = {len(value.in_blocks)}")
+        # check in_blocks count
+        if len(value.in_blocks) > 1:
+            print(f"{value.tr_cd}: {value.tr_desc} in_blocks count = {len(value.in_blocks)}")
 
         # #check headtype is not A
         # if value.headtype not in ["A", ""]:

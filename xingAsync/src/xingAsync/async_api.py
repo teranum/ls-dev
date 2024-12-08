@@ -1,4 +1,5 @@
-﻿import os, asyncio, ctypes, time, win32gui, win32api
+﻿from csv import list_dialects
+import os, asyncio, ctypes, time, win32gui, win32api
 from .models import AccountInfo, ResponseData
 from .native import LINKDATA_RECV_MSG, XING_MSG, RECV_FLAG, MSG_PACKET, RECV_PACKET, REAL_RECV_PACKET
 from .resource import FieldSpec, ResourceManager
@@ -201,7 +202,7 @@ class XingApi:
         self.close()
         return False
 
-    async def request(self, tr_cd:str, in_datas:str, cont_yn:bool = False, cont_key:str = ''):
+    async def request(self, tr_cd:str, in_datas:str|list|dict, cont_yn:bool = False, cont_key:str = ''):
         """
         request data to server
         """
@@ -222,70 +223,35 @@ class XingApi:
         response.tr_cd = tr_cd
         response.res = res_info
 
-        # input reorder
-        if isinstance(in_datas, str):
-            in_datas = [x.strip() for x in in_datas.split(",")]
-
         in_blocks = res_info.in_blocks
         out_blocks = res_info.out_blocks
 
-        in_blocks_count = len(in_blocks)
-        indata_line = b''
-        if in_blocks_count == 1:
-            in_block = res_info.in_blocks[0]
-            in_block_field_count = len(in_block.fields)
-            aligned_in_block_datas = [None] * in_block_field_count
-            correct_in_block_dict = {}
-
-            def get_correct_field_value(field: FieldSpec, value: object):
-                # return value, error
-                size = field.size
-                if size == 0: return value, ''
-                str_val = ''
-                if field.var_type == FieldSpec.VarType.STRING:
-                    if value is None:
-                        str_val = ''
-                    else:
-                        str_val = str(value)
-                    if len(str_val) > size:
-                        return str_val, f'자리수 초과, 최대 {size}자리'
-                    return str_val.ljust(size), ''
-                if field.var_type == FieldSpec.VarType.INT:
-                    if value is None:
-                        return '0'.rjust(size), ''
-                    if isinstance(value, str):
-                        str_val = str(value)
-                    else:
-                        try:
-                            str_val = str(int(value))
-                        except:
-                            return str(value), '입력 타입 오류'
-                    if len(str_val) > size:
-                        return str_val, f'자리수 초과, 최대 {size}자리'
-                    return str_val.rjust(size, '0'), ''
-                if field.var_type == FieldSpec.VarType.FLOAT:
-                    flag_B = res_info.headtype == 'B'
-                    if flag_B:
-                        if value is None:
-                            str_val = '0'
-                        else:
-                            try:
-                                str_val = str(float(value))
-                            except:
-                                return str(value), '입력 타입 오류'
-                        if '.' not in str_val:
-                            str_val += '.'
-                            str_val += '0' * field.dot_size
-                        else:
-                            dot_pos = str_val.index('.')
-                            dot_len = len(str_val) - dot_pos - 1
-                            if dot_len > field.dot_size:
-                                str_val = str_val[:dot_pos + field.dot_size + 1]
-                            else:
-                                str_val += '0' * (field.dot_size - dot_len)
-                        if len(str_val) > size:
-                            return str_val, f'자리수 초과, 최대 {size}자리'
-                        return str_val.rjust(size, '0'), ''
+        def get_correct_field_value(field: FieldSpec, value: object):
+            # return value, error
+            size = field.size
+            if size == 0: return value, ''
+            str_val = ''
+            if field.var_type == FieldSpec.VarType.STRING:
+                if value is None:
+                    str_val = ''
+                else:
+                    str_val = str(value)
+                if len(str_val) > size:
+                    return str_val, f'자리수 초과, 최대 {size}자리'
+                return str_val.ljust(size), ''
+            if field.var_type == FieldSpec.VarType.INT:
+                if value is None:
+                    return '0'.rjust(size), ''
+                try:
+                    str_val = str(int(value))
+                except:
+                    return str(value), '입력 타입 오류'
+                if len(str_val) > size:
+                    return str_val, f'자리수 초과, 최대 {size}자리'
+                return str_val.rjust(size, '0'), ''
+            if field.var_type == FieldSpec.VarType.FLOAT:
+                flag_B = res_info.headtype == 'B'
+                if flag_B:
                     if value is None:
                         str_val = '0'
                     else:
@@ -294,107 +260,89 @@ class XingApi:
                         except:
                             return str(value), '입력 타입 오류'
                     if '.' not in str_val:
+                        str_val += '.'
                         str_val += '0' * field.dot_size
                     else:
                         dot_pos = str_val.index('.')
                         dot_len = len(str_val) - dot_pos - 1
                         if dot_len > field.dot_size:
-                            str_val = str_val[:dot_pos + field.dot_size]
+                            str_val = str_val[:dot_pos + field.dot_size + 1]
                         else:
                             str_val += '0' * (field.dot_size - dot_len)
                     if len(str_val) > size:
                         return str_val, f'자리수 초과, 최대 {size}자리'
                     return str_val.rjust(size, '0'), ''
-                return value, 'invalid type'
+                if value is None:
+                    str_val = '0'
+                else:
+                    try:
+                        str_val = str(float(value))
+                    except:
+                        return str(value), '입력 타입 오류'
+                if '.' not in str_val:
+                    str_val += '0' * field.dot_size
+                else:
+                    dot_pos = str_val.index('.')
+                    dot_len = len(str_val) - dot_pos - 1
+                    if dot_len > field.dot_size:
+                        str_val = str_val[:dot_pos + field.dot_size]
+                    else:
+                        str_val += '0' * (field.dot_size - dot_len)
+                if len(str_val) > size:
+                    return str_val, f'자리수 초과, 최대 {size}자리'
+                return str_val.rjust(size, '0'), ''
+            return value, 'invalid type'
 
-            if isinstance(in_datas, dict):
-                for i in range(in_block_field_count):
-                    field = in_block.fields[i]
-                    if field.name in in_datas:
-                        obj_val = in_datas[field.name]
-                    else:
-                        obj_val = None
-                    str_val, error = get_correct_field_value(field, obj_val)
-                    if len(error) > 0:
-                        self._last_message = f"[{field.name}] {error}"
-                        return None
-                    aligned_in_block_datas[i] = str_val
-                    correct_in_block_dict[field.name] = str_val.strip()
-            elif isinstance(in_datas, list):
-                indata_count = len(in_datas)
-                for i in range(in_block_field_count):
-                    field = in_block.fields[i]
-                    if i < indata_count:
-                        obj_val = in_datas[i]
-                    else:
-                        obj_val = None
-                    str_val, error = get_correct_field_value(field, obj_val)
-                    if len(error) > 0:
-                        self._last_message = f"[{field.name}] {error}"
-                        return None
-                    aligned_in_block_datas[i] = str_val
-                    correct_in_block_dict[field.name] = str_val.strip()
-            else:
-                self._last_message = "입력 타입 오류"
+        # input reorder
+        if isinstance(in_datas, str):
+            in_datas = [x.strip() for x in in_datas.split(",")]
+
+        if isinstance(in_datas, dict):
+            if len(in_blocks) != 1:
+                self._last_message = "해당 TR의 딕셔너리 입력은 현재버전 지원 불가."
                 return None
+            list_datas = []
+            for field in in_blocks[0].fields:
+                if field.name in in_datas:
+                    list_datas.append(in_datas[field.name])
+                else:
+                    list_datas.append(None)
+            in_datas = list_datas
 
-            response.body[in_block.name] = correct_in_block_dict
+        if not isinstance(in_datas, list):
+            self._last_message = "입력 데이터 타입 오류."
+            return None
 
-            for i in range(in_block_field_count):
-                size = in_block.fields[i].size
-                enc_val = aligned_in_block_datas[i].encode(self.enc)
-                if len(enc_val) > size:
-                    enc_val = enc_val[:size]
-                indata_line += enc_val
-                if res_info.is_attr:
-                    indata_line += b" "
-        elif in_blocks_count == 2:
-            if response.tr_cd == 'o3127': # 해외선물옵션관심종목조회(o3127)-API용
-                # 입력 포멧: "F선물코드1, F선물코드2, O옵션코드1, O옵션코드2..."
-                if isinstance(in_datas, list):
-                    mktgb_symbols = []
-                    for in_data in in_datas:
-                        if len(in_data) > 2:
-                            mktgb: str = in_data[0]
-                            symbol = in_data[1:]
-                            if mktgb in ['F', 'O']:
-                                mktgb_symbols.append((mktgb, symbol))
-                                continue
-                        self._last_message = "입력 데이터 형식 오류"
+        in_datas_count = len(in_datas)
+        in_datas_index = 0
+        indata_line = b''
+
+        for in_block in in_blocks:
+            list_inblock_datas = []
+            while True:
+                correct_in_block_dict = {}
+                for field in in_block.fields:
+                    if in_datas_index < in_datas_count:
+                        obj_val = in_datas[in_datas_index]
+                    else:
+                        obj_val = None
+                    str_val, error = get_correct_field_value(field, obj_val)
+                    if len(error) > 0:
+                        self._last_message = f"[{field.name}] {error}"
                         return None
-                    array_len = len(mktgb_symbols)
-                    if array_len == 0:
-                        self._last_message = "입력 데이터 형식 오류"
-                        return None
-                    str_array_len = str(array_len).rjust(4, '0')
-                    response.body[res_info.in_blocks[0].name] = {'nrec':str_array_len}
-                    o3127InBlock1 = []
-                    indata_line = b""
-                    indata_line += str_array_len.encode(self.enc)
+                    indata_line += str_val.encode(self.enc)
+                    correct_in_block_dict[field.name] = str_val.strip()
                     if res_info.is_attr:
                         indata_line += b" "
-                    for mktgb, symbol in mktgb_symbols:
-                        indata_line += mktgb.encode(self.enc)
-                        if res_info.is_attr:
-                            indata_line += b" "
-                        aligned_symbol = symbol.ljust(16, ' ')
-                        indata_line += aligned_symbol.encode(self.enc)
-                        if res_info.is_attr:
-                            indata_line += b" "
-                        o3127InBlock1.append({'mktgb':mktgb, 'symbol':aligned_symbol.strip()})
-                    response.body[res_info.in_blocks[1].name] = o3127InBlock1
-                else:
-                    self._last_message = "invalid inputs type"
-                    return None
-            else:
-                self._last_message = "현재 버전에서 지원하지 않습니다."
-                return None
-        elif in_blocks_count > 2:
-            self._last_message = "자원정보 inblock개수가 2이상입니다, 현재버전 지원 불가."
-            return None
-        else:
-            self._last_message = "자원정보에 inblock이 없습니다, 현재버전 지원 불가."
-            return None
+                    in_datas_index += 1
+                if not in_block.is_occurs:
+                    response.body[in_block.name] = correct_in_block_dict
+                    break
+                list_inblock_datas.append(correct_in_block_dict)
+                if in_datas_index >= in_datas_count:
+                    break
+            if in_block.is_occurs and len(list_inblock_datas) > 0:
+                response.body[in_block.name] = list_inblock_datas
 
         self._last_message = ""
         start_time = time.perf_counter_ns()
