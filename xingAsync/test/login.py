@@ -1,28 +1,27 @@
-# -*- coding: euc-kr -*-
-from xingAsync import *
-from app_key import user_id, user_pwd, cert_pwd # app_key.py ÆÄÀÏ¿¡ »ç¿ëÀÚ ID, ºñ¹ø, °øÁõ ºñ¹øÀ» ÀúÀåÇØµÎ°í import
+ï»¿from xingAsync import *
+from app_key import user_id, user_pwd, cert_pwd # app_key.py íŒŒì¼ì— ì‚¬ìš©ì ID, ë¹„ë²ˆ, ê³µì¦ ë¹„ë²ˆì„ ì €ì¥í•´ë‘ê³  import
 
 async def sample(api: XingApi):
-    print('·Î±×ÀÎ ¿äÃ»Áß...')
+    print('ë¡œê·¸ì¸ ìš”ì²­ì¤‘...')
 
     if not await api.login(user_id, user_pwd, cert_pwd):
-        print(f'·Î±×ÀÎ ½ÇÆĞ: {api.last_message}')
+        print(f'ë¡œê·¸ì¸ ì‹¤íŒ¨: {api.last_message}')
         return
 
-    print(f'·Î±×ÀÎ ¼º°ø: {'¸ğÀÇÅõÀÚ' if api.is_simulation else '½ÇÅõÀÚ'}')
+    print(f'ë¡œê·¸ì¸ ì„±ê³µ: {'ëª¨ì˜íˆ¬ì' if api.is_simulation else 'ì‹¤íˆ¬ì'}')
 
-    # º¸À¯°èÁÂ Ç¥½Ã
+    # ë³´ìœ ê³„ì¢Œ í‘œì‹œ
     for x in api.accounts:
         print(x)
 
-    # »ï¼ºÀüÀÚ ÇöÀç°¡ Á¶È¸
-    response = await api.request('t1102', '005930') # 005930: »ï¼ºÀüÀÚ
+    # ì‚¼ì„±ì „ì í˜„ì¬ê°€ ì¡°íšŒ
+    response = await api.request('t1102', '005930') # 005930: ì‚¼ì„±ì „ì
     if not response:
-        print(f'¿äÃ»½ÇÆĞ: {api.last_message}')
+        print(f'ìš”ì²­ì‹¤íŒ¨: {api.last_message}')
         return
 
     price = response['t1102OutBlock']['price']
-    print(f'»ï¼ºÀüÀÚ ÇöÀç°¡: {price}')
+    print(f'ì‚¼ì„±ì „ì í˜„ì¬ê°€: {price}')
 
     print(response)
 
