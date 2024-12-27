@@ -25,7 +25,7 @@ bool Realtime : 실시간 시세 등록/해제 (반환값 true: 성공, false: �
 
 // 이벤트
 OnMessageEvent : 메시지 이벤트 (LOGOUT 또는 DISCONNECT)
-OnRealtimeEvent : 실시간 이벤트 (true: 성공, false: 실패, 실패시 lastMessage에 오류메시지가 저장됩니다.)
+OnRealtimeEvent : 실시간 이벤트
 
 ```
 
