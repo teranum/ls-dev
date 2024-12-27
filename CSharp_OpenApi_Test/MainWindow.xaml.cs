@@ -169,12 +169,12 @@ public partial class MainWindow : Window
                         """
                         {
                             "t8410InBlock" : {
-                            "shcode" : "005930",
-                            "gubun" : "2",
-                            "qrycnt" : 500,
-                            "edate" : "99999999",
-                            "comp_yn" : "N",
-                            "sujung" : "Y"
+                                "shcode" : "005930",
+                                "gubun" : "2",
+                                "qrycnt" : 500,
+                                "edate" : "99999999",
+                                "comp_yn" : "N",
+                                "sujung" : "Y"
                             }
                         }
                         """;
