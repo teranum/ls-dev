@@ -96,10 +96,10 @@ OnRealtimeEvent : 실시간 이벤트
             "qrycnt" : 500,
             "edate" : "99999999",
             "comp_yn" : "N",
-            "sujung" : "Y",
+            "sujung" : "Y"
             }
         }
-        """);
+        """;
     var response = await api.RequestAsync("t1102", inputs);
 
     // 연속요청
