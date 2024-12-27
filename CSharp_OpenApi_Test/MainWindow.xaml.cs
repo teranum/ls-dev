@@ -152,19 +152,32 @@ public partial class MainWindow : Window
             case "주식-차트조회":
                 {
                     var tr_cd = "t8410"; // 주식챠트(일주월년)(API용)
+                                         //var inputs =
+                                         //    new Dictionary<string, object>
+                                         //    {
+                                         //        ["t8410InBlock"] = new Dictionary<string, object>
+                                         //        {
+                                         //            ["shcode"] = "005930",  // 삼성전자
+                                         //            ["gubun"] = "2",        // 주기구분(2:일3:주4:월5:년)
+                                         //            ["qrycnt"] = 500,       // 요청건수(최대-압축:2000비압축:500)
+                                         //            ["edate"] = "99999999", // 종료일자
+                                         //            ["comp_yn"] = "N",      // 압축여부(Y:압축N:비압축)
+                                         //            ["sujung"] = "Y",       // 수정주가여부(Y:적용N:비적용)
+                                         //        },
+                                         //    };
                     var inputs =
-                        new Dictionary<string, object>
+                        """
                         {
-                            ["t8410InBlock"] = new Dictionary<string, object>
-                            {
-                                ["shcode"] = "005930",  // 삼성전자
-                                ["gubun"] = "2",        // 주기구분(2:일3:주4:월5:년)
-                                ["qrycnt"] = 500,       // 요청건수(최대-압축:2000비압축:500)
-                                ["edate"] = "99999999", // 종료일자
-                                ["comp_yn"] = "N",      // 압축여부(Y:압축N:비압축)
-                                ["sujung"] = "Y",       // 수정주가여부(Y:적용N:비적용)
-                            },
-                        };
+                            "t8410InBlock" : {
+                            "shcode" : "005930",
+                            "gubun" : "2",
+                            "qrycnt" : 500,
+                            "edate" : "99999999",
+                            "comp_yn" : "N",
+                            "sujung" : "Y"
+                            }
+                        }
+                        """;
                     var response = await _api.RequestAsync(tr_cd, inputs);
                     AppendResult($"{tr_cd}: {_api.LastMessage}");
                     if (response is not null)
