@@ -35,7 +35,7 @@ namespace LS.XingApi
         public double dot_value;
 
         /// <summary>생성자</summary>
-        public FieldSpec(string name, string desc, string type, double size)
+        public FieldSpec(string name, string desc, string type, int field_size, int dot_size)
         {
             this.name = name;
             this.desc = desc;
@@ -48,9 +48,8 @@ namespace LS.XingApi
                 _ => VarType.STRING,
             };
 
-            this.size = (int)size;
-            this.dot_value = 0;
-            this.dot_size = (int)(size * 10 - this.size * 10);
+            this.size = field_size;
+            this.dot_value = dot_size;
             if (this.dot_size > 0)
             {
                 this.dot_value = Math.Pow(10, this.dot_size);
@@ -285,8 +284,19 @@ namespace LS.XingApi
                         var field_desc = spec_fields[0];
                         var field_name = spec_fields[2];
                         var field_type = spec_fields[3];
-                        var field_size = double.Parse(spec_fields[4]);
-                        blockSpec!.fields.Add(new FieldSpec(field_name, field_desc, field_type, field_size));
+                        var fieldSize_dotSize = spec_fields[4].Split('.');
+                        var field_size = 0;
+                        var dot_size = 0;
+                        if (fieldSize_dotSize.Length > 1)
+                        {
+                            field_size = int.Parse(fieldSize_dotSize[0]);
+                            dot_size = int.Parse(fieldSize_dotSize[1]);
+                        }
+                        else
+                        {
+                            field_size = int.Parse(fieldSize_dotSize[0]);
+                        }
+                        blockSpec!.fields.Add(new FieldSpec(field_name, field_desc, field_type, field_size, dot_size));
                     }
                 }
                 else if (readState == RESFILE_READ_STATE.FOUNDED_BLOCK_END)
