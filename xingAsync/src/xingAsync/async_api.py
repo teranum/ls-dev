@@ -1,5 +1,4 @@
-﻿from csv import list_dialects
-import os, asyncio, ctypes, time, win32gui, win32api
+﻿import os, asyncio, ctypes, time, win32gui, win32api
 from .models import AccountInfo, ResponseData
 from .native import LINKDATA_RECV_MSG, XING_MSG, RECV_FLAG, MSG_PACKET, RECV_PACKET, REAL_RECV_PACKET
 from .resource import FieldSpec, ResourceManager
@@ -116,7 +115,7 @@ class XingApi:
     def on_realtime(self):
         """
         실시간 이벤트 핸들러
-        on_realtime(tr_cd: str, key: str, datas: dict | list)
+        on_realtime(tr_cd: str, key: str, datas: dict)
         """
         return self._on_realtime
 
@@ -141,8 +140,14 @@ class XingApi:
 
     async def login(self, user_id: str, user_pwd: str, cert_pwd: str = "", server_ip:str = "") -> bool:
         """
-        서버에 로그인, 성공시 True 반환, 오류시 False 반환(last_message에 오류 메시지)
-        cert_pwd가 비어있으면 시뮬레이션 모드
+        서버에 로그인
+        user_id: 사용자 ID
+        user_pwd: 사용자 비밀번호
+        cert_pwd: 공인인증 비밀번호 (default: "", 비어있는 경우 모의투자로 로그인)
+        server_ip: 서버 IP (default: "")
+
+        return:
+        성공시 True 반환, 오류시 False 반환(last_message에 오류 메시지)
         """
         if self.logined:
             self._last_message = "이미 로그인 되었습니다."
@@ -204,7 +209,13 @@ class XingApi:
 
     async def request(self, tr_cd:str, in_datas:str|list|dict, cont_yn:bool = False, cont_key:str = ''):
         """
-        request data to server
+        TR 요청
+        tr_cd: TR 코드
+        in_datas: 입력값
+        cont_yn: 연속여부 (default: False)
+        cont_key: 연속키 (default: '')
+
+        return: 성공시 ResponseData 객체, 실패시 None, last_message에 오류 메시지
         """
         if not self.logined:
             self._last_message = "로그인 후 사용 가능합니다."
@@ -394,7 +405,7 @@ class XingApi:
                                 for j in range(cols):
                                     field = out_block.fields[j]
                                     size = field.size
-                                    text_data = ctypes.string_at(lpData, size).rstrip(b'\0').decode(self.enc, errors="ignore").strip()
+                                    text_data = ctypes.string_at(lpData, size).rstrip(b'\0 ').decode(self.enc, errors="ignore").strip()
                                     text_len = len(text_data)
                                     try:
                                         if field.var_type == FieldSpec.VarType.INT:
@@ -431,7 +442,7 @@ class XingApi:
                             if nDataLength < 5:
                                 # errMsg = "수신 데이터 길이 오류."
                                 break
-                            str_count = ctypes.string_at(lpData, 5).decode(self.enc)
+                            str_count = ctypes.string_at(lpData, 5).rstrip(b'\0').decode(self.enc)
                             nFrameCount = int(str_count)
                             lpData += 5
                             nDataLength -= 5
@@ -447,7 +458,7 @@ class XingApi:
                             for j in range(cols):
                                 field = out_block.fields[j]
                                 size = field.size
-                                text_data = ctypes.string_at(lpData, size).rstrip(b'\0').decode(self.enc, errors="ignore").strip()
+                                text_data = ctypes.string_at(lpData, size).rstrip(b'\0 ').decode(self.enc, errors="ignore").strip()
                                 text_len = len(text_data)
                                 try:
                                     if field.var_type == FieldSpec.VarType.INT:
@@ -493,6 +504,9 @@ class XingApi:
         return response
 
     def remove_service(self, tr_cd: str, data: str) -> bool:
+        """
+        remove service
+        """
         ret = self._module.ETK_RemoveService(self._hwnd, tr_cd.encode(self.enc), data.encode(self.enc))
         if ret < 0:
             self._last_message = f"[{ret}] {self._get_error_message(ret)}"
@@ -500,9 +514,15 @@ class XingApi:
         self._last_message = ""
         return True
 
-    def realtime(self, tr_cd:str, in_datas:str, advise: bool):
+    def realtime(self, tr_cd:str, in_datas:str | list[str], advise: bool):
         """
-        advise / unadvise realtime data to server
+        실시간 등록/해제
+        return 성공시 True, 실패시 False, last_message에 오류 메시지
+
+        ex1) realtime('S3_', '005930', True)
+        ex2) realtime('S3_', '005930,078020', True)
+        ex3) realtime('S3_', ['005930', '078020'], True)
+        ex4) realtime('', '', False) # remove all realtime data
         """
         if not self.logined:
             self._last_message = "로그인 후 사용 가능합니다."
@@ -523,65 +543,103 @@ class XingApi:
         if res_info.is_func:
             self._last_message = "실시간 요청이 아닙니다."
             return False
-
-        in_datas = [x.strip() for x in in_datas.split(",")]
+        if isinstance(in_datas, str):
+            in_datas = [x.strip() for x in in_datas.split(",")]
         in_datas_count = len(in_datas)
         in_blocks = res_info.in_blocks
         in_blocks_count = len(in_blocks)
-        indata_line = b''
-        data_unit_len = 0
+        enc_tr_cd = tr_cd.encode(self.enc)
         if in_blocks_count == 1:
+            data_unit_len = 0
             in_block = res_info.in_blocks[0]
             in_block_field_count = len(in_block.fields)
             if in_block_field_count > 0:
                 field_inf = in_block.fields[0]
                 field_size = field_inf.size
                 data_unit_len = field_size
-                for i in range(in_datas_count):
-                    enc_val = in_datas[i].encode(self.enc)
-                    enc_val = enc_val.ljust(field_size, b' ')
-                    indata_line += enc_val
+                for i in range(0, in_datas_count, 100):
+                    indata_line = b''
+                    codes = in_datas[i:i+100]
+                    for code in codes:
+                        enc_val = code.encode(self.enc).ljust(field_size, b' ')
+                        indata_line += enc_val
+                    if advise:
+                        ok = self._module.ETK_AdviseRealData(self._hwnd, enc_tr_cd, indata_line, data_unit_len)
+                    else:
+                        ok = self._module.ETK_UnadviseRealData(self._hwnd, enc_tr_cd, indata_line, data_unit_len)
+                    if not ok:
+                        err_code = self._get_last_error()
+                        self._last_message = f"[{err_code}] {self._get_error_message(err_code)}"
+                        return False
+                self._last_message = "실시간 등록 성공"
+                return True
 
         if advise:
-            ok = self._module.ETK_AdviseRealData(self._hwnd, tr_cd.encode(self.enc), indata_line, data_unit_len)
+            ok = self._module.ETK_AdviseRealData(self._hwnd, enc_tr_cd, b'', 0)
         else:
-            ok = self._module.ETK_UnadviseRealData(self._hwnd, tr_cd.encode(self.enc), indata_line, data_unit_len)
+            ok = self._module.ETK_UnadviseRealData(self._hwnd, enc_tr_cd, b'', 0)
 
         if not ok:
             err_code = self._get_last_error()
             self._last_message = f"[{err_code}] {self._get_error_message(err_code)}"
             return False
 
-        self._last_message = ""
+        self._last_message = "실시간 등록 성공"
         return True
 
-    # def advise_realtime(self, tr_cd:str, in_datas:str):
-    #     return self.realtime(tr_cd, in_datas, True)
+    def request_link_to_hts(self, link_key: str, link_data: str):
+        """
+        API에서 HTS로의 연동을 원할 때 요청합니다.
+        [1] 종목연동
+            link_key: 연동키
+                &STOCK_CODE : 주식 종목코드 &ETF_CODE : ETF 종목코드
+                &ELW_CODE : ELW 종목코드 &KONEX_CODE : 코넥스 종목코드
+                &FREEBOARD_CODE : 프리보드 종목코드
+                &KSPI_CODE : 코스피 업종 코드 &KSQI_CODE : 코스닥 업종 코드
+                &FUTURE_CODE : 선물종목코드 &OPTION_CODE : 옵션종목코드
+                &FUTOPT_CODE : 선물/옵션 종목코드
+                &FUTSP_CODE : 선물스프레드 종목코드
+                &STOCK_FUTURE_CODE : 주식 선물 종목코드
+                &STOCK_OPTION_CODE : 주식 옵션 종목코드
+                &STOCK_FUTOPT_CODE : 주식 선물옵션 종목코드
+                &STOCK_FUTSP_CODE : 주식 선물스프레드 종목코드
+                &FUTOPT_STOCK_FUTOPT_CODE : 선물옵션 & 주식 선물옵션 종목코드
+                &US_CODE : 해외종목코드
+                &COMMODITY_FUTOPT_CODE : 상품선물/선물옵션
+                &COMMODITY_FUTURE_CODE : 상품선물
+                &COMMODITY_STAR_CODE : 스타선물
+                &CME_FUTURE_CODE : CME야간선물
+                &EUREX_OPTION_CODE : EUREX야간옵션
+                &NIGHT_FUTOPT_CODE : 야간선물옵션
 
-    # def unadvise_realtime(self, tr_cd:str, in_datas:str):
-    #     return self.realtime(tr_cd, in_datas, False)
+            link_data: 상품별 종목코드
 
-    # def request_link_to_hts(self, link_name: str, link_data: str):
-    #     """
-    #     API에서 HTS로의 연동을 원할 때 요청합니다.
-    #     """
-    #     if not self.logined:
-    #         self._last_message = "로그인 후 사용 가능합니다."
-    #         return False
-    #     return True if self._module.ETK_RequestLinkToHTS(self._hwnd, link_name.encode(self.enc), link_data.encode(self.enc), "".encode(self.enc)) > 0 else False
+        [2] HTS 화면열기
+            link_key: 연동키
+                &OPEN_SCREEN
+            link_data: HTS에서 열고자 원하는 화면번호
 
-    # def link_from_hts(self, advise: bool):
-    #     """
-    #     HTS에서 API로의 연동을 등록/해지 합니다.
-    #     """
-    #     if not self.logined:
-    #         self._last_message = "로그인 후 사용 가능합니다."
-    #         return False
-    #     if advise:
-    #         self._module.ETK_AdviseLinkFromHTS(self._hwnd)
-    #     else:
-    #         self._module.ETK_UnAdviseLinkFromHTS(self._hwnd)
-    #     return True
+        """
+        if not self.logined:
+            self._last_message = "로그인 후 사용 가능합니다."
+            return False
+        if self._module.ETK_RequestLinkToHTS(self._hwnd, link_key.encode(self.enc), link_data.encode(self.enc), "".encode(self.enc)) > 0:
+            return True
+        self._last_message = "HTS연동 요청 실패."
+        return False
+
+    def link_from_hts(self, advise: bool):
+        """
+        HTS에서 API로의 연동을 등록/해지 합니다.
+        """
+        if not self.logined:
+            self._last_message = "로그인 후 사용 가능합니다."
+            return False
+        if advise:
+            self._module.ETK_AdviseLinkFromHTS(self._hwnd)
+        else:
+            self._module.ETK_UnAdviseLinkFromHTS(self._hwnd)
+        return True
 
     def get_requests_count(self, tr_cd: str):
         """
@@ -631,11 +689,11 @@ class XingApi:
 
                 case XING_MSG.XM_LOGOUT:
                     XingApi._user_logined = False
-                    self.on_message.emit_signal('LOGOUT')
+                    self._on_message.emit_signal('LOGOUT')
 
                 case XING_MSG.XM_DISCONNECT:
                     XingApi._user_logined = False
-                    self.on_message.emit_signal('DISCONNECT')
+                    self._on_message.emit_signal('DISCONNECT')
 
                 case XING_MSG.XM_RECEIVE_DATA:
                     match wparam:
@@ -680,10 +738,8 @@ class XingApi:
                         col_datas = {}
                         col_datas["sLinkName"] = unpack_result.sLinkName.decode(self.enc).strip()
                         col_datas["sLinkData"] = unpack_result.sLinkData.decode(self.enc).strip()
-                        col_datas["sFiller"] = unpack_result.sFiller.decode(self.enc).strip()
-                        self.on_realtime.emit_signal("LinkData", "", col_datas)
-
-                        self._module.ETK_ReleaseMessageData(lparam)
+                        # col_datas["sFiller"] = unpack_result.sFiller
+                        self._on_realtime.emit_signal("LinkData", "", col_datas)
 
                 case XING_MSG.XM_RECEIVE_REAL_DATA | XING_MSG.XM_RECEIVE_REAL_DATA_SEARCH | XING_MSG.XM_RECEIVE_REAL_DATA_CHART:
                     unpack_result = ctypes.cast(lparam, ctypes.POINTER(REAL_RECV_PACKET)).contents
@@ -738,7 +794,7 @@ class XingApi:
                                 if res_info.is_attr:
                                     size += 1
                                 pszData += size
-                            self.on_realtime.emit_signal(szTrCode, szKeyData, col_datas)
+                            self._on_realtime.emit_signal(szTrCode, szKeyData, col_datas)
 
             return 0
 

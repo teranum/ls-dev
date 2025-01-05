@@ -1,4 +1,4 @@
-﻿namespace LS.XingApi
+﻿namespace LS.OpenApi
 {
     /// <summary>
     /// 실시간 이벤트

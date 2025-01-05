@@ -1,4 +1,5 @@
 ﻿from enum import Enum
+from operator import length_hint
 import os
 import __main__
 
@@ -8,7 +9,7 @@ class FieldSpec:
         INT = 1
         FLOAT = 2
 
-    def __init__(self, name: str, desc: str, var_type: str, size: float):
+    def __init__(self, name: str, desc: str, var_type: str, field_size: int, dot_size: float):
         self.name = name
         self.desc = desc
         match var_type:
@@ -23,10 +24,9 @@ class FieldSpec:
         
         self.var_type = varType
 
-        self.size = int(size)
-        self.dot_size = 0
+        self.size = field_size
+        self.dot_size = dot_size
         self.dot_value = 0
-        self.dot_size = int(size * 10 - self.size * 10)
         if self.dot_size > 0:
             self.dot_value = pow(10, self.dot_size)
 
@@ -149,8 +149,10 @@ class ResInfo:
                     # field_name = spec_fields[1] # not used
                     field_name = spec_fields[2]
                     field_type = spec_fields[3]
-                    field_size = float(spec_fields[4])
-                    blockSpec.fields.append(FieldSpec(field_name, field_desc, field_type, field_size))
+                    length_dotsize = spec_fields[4].split(".")
+                    field_size = int(length_dotsize[0])
+                    dot_size = 0 if len(length_dotsize) < 2 else int(length_dotsize[1])
+                    blockSpec.fields.append(FieldSpec(field_name, field_desc, field_type, field_size, dot_size))
 
             elif readState == ResInfo.RESFILE_READ_STATE.FOUNDED_BLOCK_END:
                 if line == "END_DATA_MAP":
