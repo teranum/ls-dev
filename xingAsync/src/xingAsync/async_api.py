@@ -1,4 +1,5 @@
-﻿import os, asyncio, ctypes, time, win32gui, win32api
+﻿import os, asyncio, ctypes, time
+import win32gui, win32api
 from .models import AccountInfo, ResponseData
 from .native import LINKDATA_RECV_MSG, XING_MSG, RECV_FLAG, MSG_PACKET, RECV_PACKET, REAL_RECV_PACKET
 from .resource import FieldSpec, ResourceManager
@@ -163,6 +164,8 @@ class XingApi:
         XingApi._is_simulation = len(cert_pwd) == 0
         if len(server_ip) == 0:
             server_ip = self.simul_domain if self._is_simulation else self.real_domain
+        else:
+            server_ip = server_ip.encode(self.enc)
         if not self._module.ETK_IsConnected():
             self._module.ETK_Connect(self._hwnd, server_ip, 20001, self.XM_MSG_BASE, -1, -1)
         if self._module.ETK_IsConnected():
@@ -355,16 +358,6 @@ class XingApi:
             if in_block.is_occurs and len(list_inblock_datas) > 0:
                 response.body[in_block.name] = list_inblock_datas
 
-        self._last_message = ""
-        start_time = time.perf_counter_ns()
-        if tr_cd in ["t1857", "ChartIndex", "ChartExcel"]:
-            nRqID = self._module.ETK_RequestService(self._hwnd, tr_cd.encode(self.enc), indata_line)
-        else:
-            nRqID = self._module.ETK_Request(self._hwnd, tr_cd.encode(self.enc), indata_line, len(indata_line), cont_yn, cont_key.encode(self.enc), self.default_timeout)
-        response.id = nRqID
-        if response.id < 0:
-            self._last_message = f"[{response.id}] {self._get_error_message(response.id)}"
-            return None
         def callback(wparam, lparam):
             if wparam in [RECV_FLAG.MESSAGE_DATA, RECV_FLAG.SYSTEM_ERROR_DATA]:
                 unpack_result = ctypes.cast(lparam, ctypes.POINTER(MSG_PACKET)).contents
@@ -489,6 +482,19 @@ class XingApi:
                         else:
                             response.body[out_block.name] = datas[0]
 
+        self._last_message = ""
+        is_service = tr_cd in ["t1857", "ChartIndex", "ChartExcel"]
+        response.request_time = time.time()
+        start_time = time.perf_counter_ns()
+        if is_service:
+            nRqID = self._module.ETK_RequestService(self._hwnd, tr_cd.encode(self.enc), indata_line)
+        else:
+            nRqID = self._module.ETK_Request(self._hwnd, tr_cd.encode(self.enc), indata_line, len(indata_line), cont_yn, cont_key.encode(self.enc), self.default_timeout)
+        response.id = nRqID
+        if response.id < 0:
+            self._last_message = f"[{response.id}] {self._get_error_message(response.id)}"
+            return None
+
         node = XingApi._asyncNode(response.id, callback)
         self._async_nodes.append(node)
         await node.wait()
@@ -520,8 +526,8 @@ class XingApi:
         return 성공시 True, 실패시 False, last_message에 오류 메시지
 
         ex1) realtime('S3_', '005930', True)
-        ex2) realtime('S3_', '005930,078020', True)
-        ex3) realtime('S3_', ['005930', '078020'], True)
+        ex2) realtime('S3_', '005930,000660', True)
+        ex3) realtime('S3_', ['005930', '000660'], True)
         ex4) realtime('', '', False) # remove all realtime data
         """
         if not self.logined:
@@ -568,10 +574,9 @@ class XingApi:
                     else:
                         ok = self._module.ETK_UnadviseRealData(self._hwnd, enc_tr_cd, indata_line, data_unit_len)
                     if not ok:
-                        err_code = self._get_last_error()
-                        self._last_message = f"[{err_code}] {self._get_error_message(err_code)}"
+                        self._last_message = f"함수요청 실패"
                         return False
-                self._last_message = "실시간 등록 성공"
+                self._last_message = "함수요청 성공"
                 return True
 
         if advise:
@@ -580,11 +585,10 @@ class XingApi:
             ok = self._module.ETK_UnadviseRealData(self._hwnd, enc_tr_cd, b'', 0)
 
         if not ok:
-            err_code = self._get_last_error()
-            self._last_message = f"[{err_code}] {self._get_error_message(err_code)}"
+            self._last_message = f"함수요청 실패"
             return False
 
-        self._last_message = "실시간 등록 성공"
+        self._last_message = "함수요청 성공"
         return True
 
     def request_link_to_hts(self, link_key: str, link_data: str):

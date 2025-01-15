@@ -4,8 +4,7 @@
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>2b61bde3-bd81-4a96-8c74-65c0c03d8427</ProjectGuid>
     <ProjectHome>.</ProjectHome>
-    <StartupFile>
-    </StartupFile>
+    <StartupFile>test\test_login.py</StartupFile>
     <SearchPath>src</SearchPath>
     <WorkingDirectory>
     </WorkingDirectory>
@@ -29,7 +28,9 @@
     <Folder Include="src\xingAsync\" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="test\login.py" />
+    <Compile Include="src\xingAsync\MsgIocpProactor.py" />
+    <Compile Include="test\test_realtime.py" />
+    <Compile Include="test\test_login.py" />
     <Compile Include="src\xingAsync\async_api.py" />
     <Compile Include="src\xingAsync\models.py" />
     <Compile Include="src\xingAsync\native.py" />

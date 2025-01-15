@@ -1,5 +1,4 @@
 ﻿from enum import Enum
-from operator import length_hint
 import os
 import __main__
 

@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "xingAsync"
-version = "0.1.4"
+version = "0.1.5"
 authors = [
   { name="teranum", email="teranum@gmail.com" },
 ]
@@ -19,7 +19,6 @@ classifiers = [
 ]
 dependencies = [
   "pywin32",
-  "qasync",
 ]
 [project.urls]
 Homepage = "https://github.com/teranum/ls-dev/tree/master/xingAsync"
