@@ -47,6 +47,9 @@ class ResponseData:
         self.id: int = 0
         ''' 요청 ID '''
 
+        self.request_time: float = 0.0
+        ''' 요청시간 (time) '''
+
         self.elapsed_ms: float = 0.0
         ''' 요청/응답 소요시간 (ms) '''
 

@@ -5,7 +5,7 @@
 		<ImplicitUsings>enable</ImplicitUsings>
 		<Nullable>enable</Nullable>
 		<Description>NET wrapper for LS OpenApi</Description>
-		<Version>0.0.1</Version>
+		<Version>0.0.2</Version>
 		<Title>LS.OpenApi</Title>
 		<PackageTags>LS, eBEST, OpenApi</PackageTags>
 		<Authors>teranum</Authors>
