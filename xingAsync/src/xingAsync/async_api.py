@@ -757,14 +757,16 @@ class XingApi:
                         szTrCode = "t1857"
                         real_cd = "t1857"
                     elif xM == XING_MSG.XM_RECEIVE_REAL_DATA_CHART:
-                        szTrCode = f"ChartIndex-{wparam}"
+                        szTrCode = f"ChartIndex"
+                        IndexID = int(wparam)
+                        szKeyData = f"{IndexID}"
                         real_cd = "ChartIndex"
                     else:
                         real_cd = szTrCode
 
                     res_info = self._res_manager.get(real_cd)
                     if res_info:
-                        if xM in [XING_MSG.XM_RECEIVE_REAL_DATA_SEARCH, xM == XING_MSG.XM_RECEIVE_REAL_DATA_CHART]:
+                        if xM in [XING_MSG.XM_RECEIVE_REAL_DATA_SEARCH, XING_MSG.XM_RECEIVE_REAL_DATA_CHART]:
                             out_block = res_info.out_blocks[1]
                         else:
                             out_block = res_info.out_blocks[0]
@@ -775,7 +777,7 @@ class XingApi:
                             for i in range(field_count):
                                 field = out_block.fields[i]
                                 size = field.size
-                                text_data = ctypes.string_at(pszData, size).decode(self.enc, errors="ignore").strip()
+                                text_data = ctypes.string_at(pszData, size).rstrip(b'\0 ').decode(self.enc, errors="ignore").strip()
                                 text_len = len(text_data)
                                 try:
                                     if field.var_type == FieldSpec.VarType.INT:
