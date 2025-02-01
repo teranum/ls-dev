@@ -574,7 +574,7 @@ class XingApi:
                     else:
                         ok = self._module.ETK_UnadviseRealData(self._hwnd, enc_tr_cd, indata_line, data_unit_len)
                     if not ok:
-                        self._last_message = f"함수요청 실패"
+                        self._last_message = "함수요청 실패"
                         return False
                 self._last_message = "함수요청 성공"
                 return True
@@ -585,7 +585,7 @@ class XingApi:
             ok = self._module.ETK_UnadviseRealData(self._hwnd, enc_tr_cd, b'', 0)
 
         if not ok:
-            self._last_message = f"함수요청 실패"
+            self._last_message = "함수요청 실패"
             return False
 
         self._last_message = "함수요청 성공"
@@ -757,7 +757,7 @@ class XingApi:
                         szTrCode = "t1857"
                         real_cd = "t1857"
                     elif xM == XING_MSG.XM_RECEIVE_REAL_DATA_CHART:
-                        szTrCode = f"ChartIndex"
+                        szTrCode = "ChartIndex"
                         IndexID = int(wparam)
                         szKeyData = f"{IndexID}"
                         real_cd = "ChartIndex"

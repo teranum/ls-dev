@@ -49,7 +49,7 @@ namespace LS.XingApi
             };
 
             this.size = field_size;
-            this.dot_value = dot_size;
+            this.dot_size = dot_size;
             if (this.dot_size > 0)
             {
                 this.dot_value = Math.Pow(10, this.dot_size);

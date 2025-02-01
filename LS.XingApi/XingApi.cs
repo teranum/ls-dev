@@ -563,13 +563,15 @@ namespace LS.XingApi
             {
                 if (int.TryParse(value, out var i))
                     return i;
-                return value;
+                _ = double.TryParse(value, out var d);
+                return d;
             }
             if (field_spec.type == FieldSpec.VarType.LONG)
             {
                 if (long.TryParse(value, out var l))
                     return l;
-                return value;
+                _ = double.TryParse(value, out var d);
+                return d;
             }
             if (field_spec.type == FieldSpec.VarType.DOUBLE)
             {
@@ -577,9 +579,8 @@ namespace LS.XingApi
                 {
                     if (field_spec.dot_value > 0 && !value.Contains('.'))
                         d /= field_spec.dot_value;
-                    return d;
                 }
-                return value;
+                return d;
             }
             return null!;
         }
@@ -873,7 +874,8 @@ namespace LS.XingApi
                         }
                         else if (xM == XM.XM_RECEIVE_REAL_DATA_CHART)
                         {
-                            szTrCode = $"ChartIndex-{wParam}";
+                            szTrCode = "ChartIndex";
+                            szKey = $"{wParam}";
                             real_cd = "ChartIndex";
                         }
 
