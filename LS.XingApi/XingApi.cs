@@ -561,28 +561,34 @@ namespace LS.XingApi
                 return value;
             if (field_spec.type == FieldSpec.VarType.INT)
             {
+                if (value.Length == 0)
+                    return 0;
                 if (int.TryParse(value, out var i))
                     return i;
-                _ = double.TryParse(value, out var d);
-                return d;
+                if (double.TryParse(value, out var d))
+                    return d;
             }
-            if (field_spec.type == FieldSpec.VarType.LONG)
+            else if (field_spec.type == FieldSpec.VarType.LONG)
             {
+                if (value.Length == 0)
+                    return 0L;
                 if (long.TryParse(value, out var l))
                     return l;
-                _ = double.TryParse(value, out var d);
-                return d;
+                if (double.TryParse(value, out var d))
+                    return d;
             }
-            if (field_spec.type == FieldSpec.VarType.DOUBLE)
+            else if (field_spec.type == FieldSpec.VarType.DOUBLE)
             {
+                if (value.Length == 0)
+                    return 0D;
                 if (double.TryParse(value, out var d))
                 {
                     if (field_spec.dot_value > 0 && !value.Contains('.'))
                         d /= field_spec.dot_value;
+                    return d;
                 }
-                return d;
             }
-            return null!;
+            return value;
         }
 
         /// <summary>
