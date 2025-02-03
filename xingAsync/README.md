@@ -14,7 +14,7 @@ DLL Wrapper class: XingApi<br/>
 COM Wrapper class: XingCOM<br/>
 COM base classes: XASession, XAQuery, XAReal<br/>
 
-## 로그인 (DLL 모드)
+## DLL모드 XingApi 이용, DLL를 이용하기 쉽게 Wrapper
 ### 로그인/요청/실시간 조회
 ```python
 import asyncio
