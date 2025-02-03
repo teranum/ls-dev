@@ -4,14 +4,14 @@
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>2b61bde3-bd81-4a96-8c74-65c0c03d8427</ProjectGuid>
     <ProjectHome>.</ProjectHome>
-    <StartupFile>test\test_login.py</StartupFile>
+    <StartupFile>test\test_DLL.py</StartupFile>
     <SearchPath>src</SearchPath>
     <WorkingDirectory>
     </WorkingDirectory>
     <OutputPath>.</OutputPath>
     <Name>xingAsync</Name>
     <RootNamespace>xingAsync</RootNamespace>
-    <InterpreterId>MSBuild|env64|$(MSBuildProjectFullPath)</InterpreterId>
+    <InterpreterId>MSBuild|env32|$(MSBuildProjectFullPath)</InterpreterId>
     <IsWindowsApplication>False</IsWindowsApplication>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
@@ -29,8 +29,9 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="src\xingAsync\MsgIocpProactor.py" />
-    <Compile Include="test\test_realtime.py" />
-    <Compile Include="test\test_login.py" />
+    <Compile Include="src\xingAsync\xing_com.py" />
+    <Compile Include="test\test_COM.py" />
+    <Compile Include="test\test_DLL.py" />
     <Compile Include="src\xingAsync\async_api.py" />
     <Compile Include="src\xingAsync\models.py" />
     <Compile Include="src\xingAsync\native.py" />

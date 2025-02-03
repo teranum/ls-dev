@@ -1,6 +1,6 @@
-﻿# xingAsync Package
+# LS증권 XingAPI wrapper
 
-This is a simple package for XingApi (dll mode).
+This is a simple package for XingApi (dll and com mode).
 
 ## Installation
 
@@ -8,7 +8,12 @@ This is a simple package for XingApi (dll mode).
 pip install xingAsync
 ```
 
-## 로그인
+## Usage
+DLL 모드와 COM 모드를 지원. (DLL 모드 권장)<br/>
+DLL class: XingApi<br/>
+COM class: XASession, XAQuery, XAReal<br/>
+
+## 로그인 (DLL 모드)
 ```python
 from xingAsync import *
 from app_key import user_id, user_pwd, cert_pwd # app_key.py 파일에 사용자 ID, 비번, 공증 비번을 저장해두고 import
@@ -32,7 +37,7 @@ if __name__ == "__main__":
     run_loop(sample(api))
 ```
 
-## 조회
+## 조회 (DLL 모드)
 ```python
     # 삼성전자 현재가 조회
     response = await api.request('t1102', '005930') # 005930: 삼성전자
@@ -44,7 +49,7 @@ if __name__ == "__main__":
     print(f'삼성전자 현재가: {t1102OutBlock['price']}')
 ```
 
-## 실시간조회
+## 실시간조회 (DLL 모드)
 ```python
     # 삼성전자, SK하이닉스 실시간 조회
     api.realtime("S3_", ["005930", "000660"], True) # 삼성전자, SK하이닉스 구독
@@ -63,7 +68,7 @@ if __name__ == "__main__":
 ```
 
 
-## 프로퍼티/메소드/이벤트
+## 프로퍼티/메소드/이벤트 (DLL 모드)
 
 ### 프로퍼티 (읽기전용)
 ```python
@@ -147,3 +152,83 @@ if __name__ == "__main__":
     api.on_message.connect(lambda msg: print(f'오류: {msg}'))
     api.on_realtime.connect(lambda tr_cd, key, datas: print(f'실시간: {tr_cd}, {key}, {datas}'))
 ```
+
+## COM모드 XASession, XAQuery, XAReal 이용
+### 로그인/요청/실시간 조회
+```python
+from xingAsync import XASession, XAQuery, XAReal
+from app_key import user_id, user_pwd, cert_pwd # app_key.py 파일에 사용자 ID, 비번, 공증 비번을 저장해두고 import
+
+########################################################################################
+# COM 객체를 이용한 XASession, XAQuery, XAReal 클래스 테스트
+# * Res파일 경로 설정 필요없음
+# * OnLogin, OnReceiveData 이벤트 처리 필요없음, 실시간 데이터 수신시 OnReceiveRealData 이벤트 처리 필요
+########################################################################################
+
+def sample():
+    # 로그인
+    session = XASession()
+    session.ConnectServer("api.ls-sec.co.kr", 20001)
+    if not session.Login(user_id, user_pwd, cert_pwd, 0, 0):
+        print(f"로그인 실패: {session.last_message}")
+        return
+
+    print(f"로그인 성공: {session.last_message}")
+
+    # 보유계좌 표시
+    acc_count = session.GetAccountListCount()
+    print(f"Account List Count: {acc_count}")
+    for i in range(acc_count):
+        acc_num = session.GetAccountList(i)
+        acc_name = session.GetAccountName(acc_num)
+        acc_detail = session.GetAcctDetailName(acc_num)
+        print(f"{acc_num} {acc_name} {acc_detail}")
+
+    # 요청: 삼성전자("005930") 현재가 조회
+    query = XAQuery("t1102")
+    query.SetFieldData("t1102InBlock", "shcode", 0, "005930")
+    ret = query.Request(False)
+    if ret < 0:
+        print(f"t1102 request failed: {query.last_message}")
+        return
+
+    # 요청 성공시, 조회된 데이터 확인
+    print(f"t1102 request succeeded: {query.last_message}")
+    price = query.GetFieldData('t1102OutBlock', 'price', 0)
+    print(f"삼성전자 현재가: {price}")
+
+    # 추가작업
+    ...
+
+    # 실시간 시세 요청/이벤트 처리
+    real = XAReal("S3_")
+    real.OnReceiveRealData = lambda code: print(f"RealData: {code}")
+    real.SetFieldData("InBlock", "shcode", "005930")
+    real.AdviseRealData()
+
+    # 실시간 데이터 수신시 메시지 루프 필요
+    import pythoncom
+    while True:
+        pythoncom.PumpWaitingMessages()
+
+
+if __name__ == "__main__":
+    sample()
+
+# Output:
+'''
+로그인 성공: [0000] 로그인 성공
+Account List Count: 3
+XXXXXXXXXXX 홍길동 선물옵션
+XXXXXXXXXXX 홍길동 해외선옵
+XXXXXXXXXXX 홍길동 종합매매
+t1102 request succeeded: [00000] 정상적으로 조회가 완료되었습니다.
+삼성전자 현재가: 51000
+RealData: S3_
+RealData: S3_
+RealData: S3_
+...
+'''
+```
+### XASession, XAQuery, XAReal 클래스 사용법
+LS증권 COM 개발가이드 참조: [LS증권 COM 개발가이드](https://www.ls-sec.co.kr/apiguide/guide.jsp?cno=100)

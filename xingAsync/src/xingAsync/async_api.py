@@ -1,4 +1,4 @@
-﻿import os, asyncio, ctypes, time
+import os, asyncio, ctypes, time
 import win32gui, win32api
 from .models import AccountInfo, ResponseData
 from .native import LINKDATA_RECV_MSG, XING_MSG, RECV_FLAG, MSG_PACKET, RECV_PACKET, REAL_RECV_PACKET
@@ -219,6 +219,28 @@ class XingApi:
         cont_key: 연속키 (default: '')
 
         return: 성공시 ResponseData 객체, 실패시 None, last_message에 오류 메시지
+
+        in_datas: 입력데이터 설정 방법 4가지
+            1) 딕셔너리로 입력값을 설정
+                inputs = { "shcode": "005930", "count": 100 }
+            2) 리스트로 입력값을 설정, 이 경우 입력값의 순서가 맞아야 함
+                inputs = ["005930", 100]
+            3) 문자열로 입력값을 설정, ','로 구분하여 입력, 이 경우 입력값의 순서가 맞아야 함
+                inputs = "005930,100"
+            4) 다중입력블럭 경우 딕셔너리로 구분하여 설정
+                ex) t1104: 주식현재가시세메모, (삼성전자 고가, 저가, 5이평, 20이평 가져오기)
+                inputs = {
+                    "t1104InBlock": {
+                        "code": "005930",    # 종목코드
+                        "nrec": "4",         # 건수
+                    },
+                    "t1104InBlock1": [
+                        {"indx": "0", "gubn": "1", "dat1": "2", "dat2": "1"}, 
+                        {"indx": "1", "gubn": "1", "dat1": "3", "dat2": "1"}, 
+                        {"indx": "2", "gubn": "4", "dat1": "1", "dat2": "5"}, 
+                        {"indx": "3", "gubn": "4", "dat1": "1", "dat2": "20"}, 
+                    ],
+                }
         """
         if not self.logined:
             self._last_message = "로그인 후 사용 가능합니다."
@@ -307,56 +329,105 @@ class XingApi:
                 return str_val.rjust(size, '0'), ''
             return value, 'invalid type'
 
-        # input reorder
-        if isinstance(in_datas, str):
-            in_datas = [x.strip() for x in in_datas.split(",")]
-
-        if isinstance(in_datas, dict):
-            if len(in_blocks) != 1:
-                self._last_message = "해당 TR의 딕셔너리 입력은 현재버전 지원 불가."
-                return None
-            list_datas = []
-            for field in in_blocks[0].fields:
-                if field.name in in_datas:
-                    list_datas.append(in_datas[field.name])
-                else:
-                    list_datas.append(None)
-            in_datas = list_datas
-
-        if not isinstance(in_datas, list):
-            self._last_message = "입력 데이터 타입 오류."
-            return None
-
-        in_datas_count = len(in_datas)
-        in_datas_index = 0
+        # check and order input datas
+        first_inblock = in_blocks[0]
         indata_line = b''
-
-        for in_block in in_blocks:
-            list_inblock_datas = []
-            while True:
-                correct_in_block_dict = {}
-                for field in in_block.fields:
-                    if in_datas_index < in_datas_count:
-                        obj_val = in_datas[in_datas_index]
-                    else:
-                        obj_val = None
-                    str_val, error = get_correct_field_value(field, obj_val)
-                    if len(error) > 0:
-                        self._last_message = f"[{field.name}] {error}"
+        if isinstance(in_datas, dict) and first_inblock.name in in_datas:
+            b_first = True
+            for in_block in in_blocks:
+                if in_block.name not in in_datas:
+                    if b_first:
+                        self._last_message = f"입력 데이터 오류.({in_block.name} 필요)"
                         return None
-                    indata_line += str_val.encode(self.enc)
-                    correct_in_block_dict[field.name] = str_val.strip()
-                    if res_info.is_attr:
-                        indata_line += b" "
-                    in_datas_index += 1
+                    continue
+                b_first = False
+                block_input = in_datas[in_block.name]
                 if not in_block.is_occurs:
-                    response.body[in_block.name] = correct_in_block_dict
-                    break
-                list_inblock_datas.append(correct_in_block_dict)
-                if in_datas_index >= in_datas_count:
-                    break
-            if in_block.is_occurs and len(list_inblock_datas) > 0:
-                response.body[in_block.name] = list_inblock_datas
+                    if not isinstance(block_input, dict):
+                        self._last_message = f"입력 데이터 타입 오류({in_block.name}). dict입력 필요"
+                        return None
+                    dict_in_block_data = dict()
+                    for field in in_block.fields:
+                        str_val, error = get_correct_field_value(field, block_input.get(field.name))
+                        if len(error) > 0:
+                            self._last_message = f"[{field.name}] {error}"
+                            return None
+                        indata_line += str_val.encode(self.enc)
+                        if res_info.is_attr:
+                            indata_line += b" "
+                        dict_in_block_data[field.name] = str_val.strip()
+                    response.body[in_block.name] = dict_in_block_data
+                else:
+                    if not isinstance(block_input, list):
+                        self._last_message = f"입력 데이터 타입 오류({in_block.name}). list입력 필요"
+                        return None
+                    list_inblock_datas = []
+                    for record_input in block_input:
+                        if not isinstance(record_input, dict):
+                            self._last_message = f"입력 데이터 타입 오류({in_block.name}). list[dict]입력 필요"
+                            return None
+                        dict_in_block_data = dict()
+                        for field in in_block.fields:
+                            str_val, error = get_correct_field_value(field, record_input.get(field.name))
+                            if len(error) > 0:
+                                self._last_message = f"[{field.name}] {error}"
+                                return None
+                            indata_line += str_val.encode(self.enc)
+                            if res_info.is_attr:
+                                indata_line += b" "
+                            dict_in_block_data[field.name] = str_val.strip()
+                        list_inblock_datas.append(dict_in_block_data)
+                    response.body[in_block.name] = list_inblock_datas
+        else:
+            # input reorder
+            if isinstance(in_datas, str):
+                in_datas = [x.strip() for x in in_datas.split(",")]
+
+            if isinstance(in_datas, dict):
+                if len(in_blocks) != 1:
+                    self._last_message = "다중 블록입력은 딕셔너리로 구분하여 입력."
+                    return None
+                list_datas = []
+                for field in in_blocks[0].fields:
+                    if field.name in in_datas:
+                        list_datas.append(in_datas[field.name])
+                    else:
+                        list_datas.append(None)
+                in_datas = list_datas
+
+            if not isinstance(in_datas, list):
+                self._last_message = "입력 데이터 타입 오류."
+                return None
+
+            in_datas_count = len(in_datas)
+            in_datas_index = 0
+
+            for in_block in in_blocks:
+                list_inblock_datas = []
+                while True:
+                    correct_in_block_dict = {}
+                    for field in in_block.fields:
+                        if in_datas_index < in_datas_count:
+                            obj_val = in_datas[in_datas_index]
+                        else:
+                            obj_val = None
+                        str_val, error = get_correct_field_value(field, obj_val)
+                        if len(error) > 0:
+                            self._last_message = f"[{field.name}] {error}"
+                            return None
+                        indata_line += str_val.encode(self.enc)
+                        correct_in_block_dict[field.name] = str_val.strip()
+                        if res_info.is_attr:
+                            indata_line += b" "
+                        in_datas_index += 1
+                    if not in_block.is_occurs:
+                        response.body[in_block.name] = correct_in_block_dict
+                        break
+                    list_inblock_datas.append(correct_in_block_dict)
+                    if in_datas_index >= in_datas_count:
+                        break
+                if in_block.is_occurs and len(list_inblock_datas) > 0:
+                    response.body[in_block.name] = list_inblock_datas
 
         def callback(wparam, lparam):
             if wparam in [RECV_FLAG.MESSAGE_DATA, RECV_FLAG.SYSTEM_ERROR_DATA]:
@@ -380,7 +451,7 @@ class XingApi:
                     out_block = next((x for x in out_blocks if x.name == out_block_name), None)
                     if out_block is not None:
                         if out_block.record_size == 0:
-                            response.body[out_block.name] = ctypes.string_at(lpData, nDataLength).decode(self.enc, errors="ignore").strip()
+                            response.body[out_block.name] = {out_block.fields[0].name : ctypes.string_at(lpData, nDataLength).decode(self.enc, errors="ignore").strip()}
                         else:
                             if res_info.compressable and out_block.is_occurs:
                                 if response.body.get(in_blocks[0].name)['comp_yn'] == 'Y':
