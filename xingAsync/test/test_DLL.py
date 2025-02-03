@@ -58,7 +58,6 @@ if __name__ == "__main__":
 
 # Output:
 '''
-로그인 요청중...
 로그인 성공: 실투자
 XXXXXXXXXXX 홍길동 홍길동 선물옵션
 XXXXXXXXXXX 홍길동 홍길동 해외선옵

@@ -270,7 +270,7 @@ class XingCOM:
     def __init__(self):
         self._package_folder = os.path.dirname(os.path.abspath(__file__))
         self._session = _XASession()
-        self._session.OnDisconnect = lambda: self._on_message("Disconnected")
+        self._session.OnDisconnect = lambda: self._inner_on_message('DISCONNECT')
         self._query = _XAQuery()
         self._code_to_real = {}
         
@@ -280,8 +280,8 @@ class XingCOM:
         self._res_manager = ResourceManager()
         self._accounts: list[AccountInfo] = []
 
-        self.on_message = None
-        self.on_realtime = None
+        self._on_message = self._xingSignal()
+        self._on_realtime = self._xingSignal()
 
     def _get_session(self):
         return self._session
@@ -297,9 +297,9 @@ class XingCOM:
         if tr_cd in ['t1857', 'ChartIndex']:
             new_query = _XAQuery(res_info)
             # if tr_cd == 't1857':
-            #     new_query.OnReceiveSearchRealData = lambda _: self._on_realtime(new_query, "t1857")
+            #     new_query.OnReceiveSearchRealData = lambda _: self._inner_on_realtime(new_query, "t1857")
             # elif tr_cd == 'ChartIndex':
-            #     new_query.OnReceiveChartRealData = lambda _: self._on_realtime(new_query, "ChartIndex")
+            #     new_query.OnReceiveChartRealData = lambda _: self._inner_on_realtime(new_query, "ChartIndex")
             return new_query
 
         if res_info != self._query.res_info:
@@ -319,15 +319,14 @@ class XingCOM:
         if exist_real:
             return exist_real
         new_real = _XAReal(res_info)
-        new_real.OnReceiveRealData = lambda _: self._on_realtime(new_real, tr_cd)
+        new_real.OnReceiveRealData = lambda _: self._inner_on_realtime(new_real, tr_cd)
         self._code_to_real[tr_cd] = new_real
         return new_real
 
-    def _on_message(self, msg:str):
-        if self.on_message:
-            self.on_message(msg)
+    def _inner_on_message(self, msg:str):
+        self._on_message.emit_signal('LOGOUT')
 
-    def _on_realtime(self, obj, tr_cd:str):
+    def _inner_on_realtime(self, obj, tr_cd:str):
         if self.on_realtime:
             key = ''
             datas = {}
@@ -343,7 +342,7 @@ class XingCOM:
                         key = obj.GetFieldData(outblock.name, res_info.in_blocks[0].fields[0].name)
                 for field in outblock.fields:
                     datas[field.name] = obj.GetFieldData(outblock.name, field.name)
-            self.on_realtime(tr_cd, key, datas)
+            self._on_realtime.emit_signal(tr_cd, key, datas)
 
     @property
     def last_message(self):
@@ -360,6 +359,14 @@ class XingCOM:
     @property
     def accounts(self):
         return self._accounts
+
+    @property
+    def on_message(self):
+        return self._on_message
+
+    @property
+    def on_realtime(self):
+        return self._on_realtime
 
     def close(self):
         if self._logined:
@@ -486,5 +493,18 @@ class XingCOM:
             else:
                 real.UnadviseRealData()
         return True
+
+    class _xingSignal:
+        def __init__(self):
+            self.__slots = []
+        def connect(self, slot):
+            self.__slots.append(slot)
+        def disconnect(self, slot):
+            self.__slots.remove(slot)
+        def disconnect_all(self):
+            self.__slots.clear()
+        def emit_signal(self, *args):
+            for slot in self.__slots:
+                slot(*args)
 
 # endregion
