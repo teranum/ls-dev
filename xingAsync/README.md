@@ -15,7 +15,7 @@ COM class: XASession, XAQuery, XAReal<br/>
 
 ## 로그인 (DLL 모드)
 ```python
-from xingAsync import *
+from xingAsync import XingApi, run_loop
 from app_key import user_id, user_pwd, cert_pwd # app_key.py 파일에 사용자 ID, 비번, 공증 비번을 저장해두고 import
 
 async def sample(api: XingApi):
