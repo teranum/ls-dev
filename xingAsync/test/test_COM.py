@@ -1,61 +1,55 @@
-from xingAsync import XASession, XAQuery, XAReal
+from xingAsync import XingCOM
 from app_key import user_id, user_pwd, cert_pwd # app_key.py 파일에 사용자 ID, 비번, 공증 비번을 저장해두고 import
 
 ########################################################################################
-# COM 객체를 이용한 XASession, XAQuery, XAReal 클래스 테스트
-# * Res파일 경로 설정 필요없음
-# * OnLogin, OnReceiveData 이벤트 처리 필요없음, 실시간 데이터 수신시 OnReceiveRealData 이벤트 처리 필요
+# COM 객체 통합 Wrapper XingCOM 클래스 테스트
+# * asyncio를 사용하지 않음, asyncio 이용 어려울 경우 사용 (가능한 DLL 모드 XingApi 이용 권장)
 ########################################################################################
 
-def sample():
+def sample(api:XingCOM):
     # 로그인
-    session = XASession()
-    session.ConnectServer("api.ls-sec.co.kr", 20001)
-    if not session.Login(user_id, user_pwd, cert_pwd, 0, 0):
-        print(f"로그인 실패: {session.last_message}")
+    if not api.login(user_id, user_pwd, cert_pwd):
+        print(f"로그인 실패: {api.last_message}")
         return
 
-    print(f"로그인 성공: {session.last_message}")
+    print(f"로그인 성공: {"모의투자" if api.is_simulation else "실투자"}")
 
     # 보유계좌 표시
-    acc_count = session.GetAccountListCount()
-    print(f"Account List Count: {acc_count}")
-    for i in range(acc_count):
-        acc_num = session.GetAccountList(i)
-        acc_name = session.GetAccountName(acc_num)
-        acc_detail = session.GetAcctDetailName(acc_num)
-        print(f"{acc_num} {acc_name} {acc_detail}")
+    for x in api.accounts:
+        print(x)
 
     # 요청: 삼성전자("005930") 현재가 조회
-    query = XAQuery("t1102")
-    query.SetFieldData("t1102InBlock", "shcode", 0, "005930")
-    ret = query.Request(False)
-    if ret < 0:
-        print(f"t1102 request failed: {query.last_message}")
+    response = api.request("t1102", {"shcode": "005930"})
+    if not response:
+        print(f"t1102 request failed: {api.last_message}")
         return
 
     # 요청 성공시, 조회된 데이터 확인
-    print(f"t1102 request succeeded: {query.last_message}")
-    price = query.GetFieldData('t1102OutBlock', 'price', 0)
+    print(f"t1102 request succeeded: {api.last_message}")
+    price = response["t1102OutBlock"]["price"]
     print(f"삼성전자 현재가: {price}")
 
     # 추가작업
     ...
 
     # 실시간 시세 요청/이벤트 처리
-    real = XAReal("S3_")
-    real.OnReceiveRealData = lambda code: print(f"RealData: {code}")
-    real.SetFieldData("InBlock", "shcode", "005930")
-    real.AdviseRealData()
+    codes = ["005930", "000660"] # 삼성전자, SK하이닉스 실시간 체결 수신
+    # codes = ["HSIG25", "HCEIG25"] # 항셍, 미니항셍 실시간 체결 수신, tr_cd: "OVC"
+    if not api.realtime("S3_", codes, True):
+        return print(f"실시간 요청 실패: {api.last_message}")
 
+def on_realtime(code: str, key: str, datas: dict):
+    print(f"{code}, {key}, {datas}")
+
+
+if __name__ == "__main__":
+    api = XingCOM()
+    api.on_realtime = on_realtime
+    sample(api)
     # 실시간 데이터 수신시 메시지 루프 필요
     import pythoncom
     while True:
         pythoncom.PumpWaitingMessages()
-
-
-if __name__ == "__main__":
-    sample()
 
 # Output:
 '''
@@ -66,8 +60,5 @@ XXXXXXXXXXX 홍길동 해외선옵
 XXXXXXXXXXX 홍길동 종합매매
 t1102 request succeeded: [00000] 정상적으로 조회가 완료되었습니다.
 삼성전자 현재가: 51000
-RealData: S3_
-RealData: S3_
-RealData: S3_
 ...
 '''

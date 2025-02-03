@@ -4,47 +4,52 @@ from app_key import user_id, user_pwd, cert_pwd # app_key.py 파일에 사용자
 
 #######################################################
 # DLL 이용한 XingApi 클래스 테스트
+# * 가장빠름
 # * 실시간 데이터 수신시 on_realtime 이벤트 처리 필요
 #######################################################
 
-async def sample(api: XingApi):
+async def sample(api:XingApi):
     # 로그인
     if not await api.login(user_id, user_pwd, cert_pwd):
-        print(f'로그인 실패: {api.last_message}')
+        print(f"로그인 실패: {api.last_message}")
         return
 
-    print(f'로그인 성공: {'모의투자' if api.is_simulation else '실투자'}')
+    print(f"로그인 성공: {"모의투자" if api.is_simulation else "실투자"}")
 
     # 보유계좌 표시
     for x in api.accounts:
         print(x)
 
     # 요청: 삼성전자("005930") 현재가 조회
-    response = await api.request('t1102', '005930') # 005930: 삼성전자
+    response = await api.request("t1102", {"shcode": "005930"}) # 005930: 삼성전자
     if not response:
-        print(f'요청실패: {api.last_message}')
+        print(f"t1102 request failed: {api.last_message}")
         return
 
-    price = response['t1102OutBlock']['price']
-    print(f'삼성전자 현재가: {price}')
+    # 요청 성공시, 조회된 데이터 확인
+    print(f"t1102 request succeeded: {api.last_message}")
+    price = response["t1102OutBlock"]["price"]
+    print(f"삼성전자 현재가: {price}")
 
     # 추가작업
     ...
 
     # 실시간 시세 요청/이벤트 처리
-    print(f"t1102 request succeeded: {api.last_message}")
-    codes = ['005930', '000660'] # 삼성전자, SK하이닉스 실시간 체결 수신
-    if not api.realtime('S3_', codes, True):
-        return print(f'실시간 요청 실패: {api.last_message}')
+    codes = ["005930", "000660"] # 삼성전자, SK하이닉스 실시간 체결 수신
+    # codes = ["HSIG25", "HCEIG25"] # 항셍, 미니항셍 실시간 체결 수신, tr_cd: "OVC"
+    if not api.realtime("OVC", codes, True):
+    # if not api.realtime("S3_", codes, True):
+        return print(f"실시간 요청 실패: {api.last_message}")
 
-    print('실시간 요청 성공, 60초동안 실시간 수신...')
+    print("실시간 요청 성공, 60초동안 실시간 수신...")
     await asyncio.sleep(60)
 
     # 실시간 해지
-    api.realtime('', '', False) # 실시간 해지
+    api.realtime("", "", False) # 실시간 해지
 
 def on_realtime(code: str, key: str, datas: dict):
-    print(f'{code}, {key}, {datas}')
+    print(f"{code}, {key}, {datas}")
+
 
 if __name__ == "__main__":
     api = XingApi()

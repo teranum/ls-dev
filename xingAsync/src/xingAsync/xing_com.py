@@ -1,16 +1,13 @@
 #######################
-# Xing API COM Wrapper
+# XingAPI COM Wrapper
 #######################
 import inspect
 import os
-from xml.dom import NotSupportedErr
+import time
 import win32com.client
 import pythoncom
-
-_com_session = None
-_com_query = None
-_com_code_to_real = {}
-_com_package_folder = os.path.dirname(os.path.abspath(__file__))
+from .models import AccountInfo, ResponseData
+from .resource import ResourceManager, ResInfo
 
 #region event sink
 class _XSessionEvent:
@@ -101,14 +98,15 @@ class _XASession:
         return False
 
 class _XAQuery:
-    def __init__(self, code):
+    def __init__(self, res_info = None):
         self.com = win32com.client.DispatchWithEvents("XA_DataSet.XAQuery", _XQueryEvent)
-        if code:
-            self.com.LoadFromResFile(f"{_com_package_folder}\\res\\{code}.res")
         self.com.OnReceiveData = self._OnReceiveData
         self.com.OnReceiveMessage = self._OnReceiveMessage
         self.com.OnReceiveChartRealData = self._OnReceiveChartRealData
         self.com.OnReceiveSearchRealData = self._OnReceiveSearchRealData
+        if res_info:
+            self.com.LoadFromResFile(res_info.filepath)
+        self.res_info = res_info
 
         self._last_message = str()
         self._event_raised = False
@@ -132,9 +130,9 @@ class _XAQuery:
         return self.com.ResFileName
     @ResFileName.setter
     def ResFileName(self, val):
-        raise NotSupportedErr("aleady implement construct")
+        raise NotImplementedError("aleady implement construct")
     def LoadFromResFile(self, szFileName):
-        raise NotSupportedErr("aleady implement construct")
+        raise NotImplementedError("aleady implement construct")
 
     @property
     def IsNext(self):
@@ -211,12 +209,13 @@ class _XAQuery:
         return ret
 
 class _XAReal:
-    def __init__(self, code):
+    def __init__(self, res_info = None):
         self.com = win32com.client.DispatchWithEvents("XA_DataSet.XAReal", _XRealEvent)
-        if code:
-            self.com.ResFileName = f"{_com_package_folder}\\res\\{code}.res"
         self.com.OnReceiveRealData = self._OnReceiveRealData
         self.com.OnRecieveLinkData = self._OnRecieveLinkData
+        if res_info:
+            self.com.LoadFromResFile(res_info.filepath)
+        self.res_info = res_info
 
         self.OnReceiveRealData = None
         self.OnRecieveLinkData = None
@@ -232,9 +231,9 @@ class _XAReal:
         return self.com.ResFileName
     @ResFileName.setter
     def ResFileName(self, val):
-        raise NotSupportedErr("aleady implement construct")
+        raise NotImplementedError("aleady implement construct")
     def LoadFromResFile(self, szFileName):
-        raise NotSupportedErr("aleady implement construct")
+        raise NotImplementedError("aleady implement construct")
 
     def _OnReceiveRealData(self, code):
         if self.OnReceiveRealData:
@@ -245,35 +244,247 @@ class _XAReal:
 
 #endregion
 
+# region main interface
+
+def _singleton(cls):
+    instances = {}
+    def get_instance(*args, **kwargs):
+        if cls not in instances:
+            instances[cls] = cls(*args, **kwargs)
+        return instances[cls]
+    return get_instance
 
 def XASession():
-    global _com_session
-    if _com_session is None:
-        _com_session = _XASession()
-    return _com_session
+    return XingCOM()._get_session()
 
-def XAQuery(code:str = ''):
-    if code in ['t1857', 'ChartIndex']:
-        new_query = _XAQuery(code)
-        return new_query
+def XAQuery(tr_cd:str):
+    return XingCOM()._get_query(tr_cd)
 
-    global _com_query
-    if _com_query is None:
-        _com_query = _XAQuery(code)
-        return _com_query
+def XAReal(tr_cd:str):
+    return XingCOM()._get_real(tr_cd)
 
-    if not code:
-        return _com_query
+@_singleton
+class XingCOM:
+    real_domain = "api.ls-sec.co.kr"
+    simul_domain = "demo.ls-sec.co.kr"
+    def __init__(self):
+        self._package_folder = os.path.dirname(os.path.abspath(__file__))
+        self._session = _XASession()
+        self._session.OnDisconnect = lambda: self._on_message("Disconnected")
+        self._query = _XAQuery()
+        self._code_to_real = {}
+        
+        self._last_message = str()
+        self._logined = False
+        self._is_simulation = False
+        self._res_manager = ResourceManager()
+        self._accounts: list[AccountInfo] = []
 
-    path = f"{_com_package_folder}\\res\\{code}.res"
-    if path != _com_query.com.ResFileName:
-        _com_query.com.ResFileName = path
-    return _com_query
+        self.on_message = None
+        self.on_realtime = None
 
-def XAReal(code:str):
-    exist_real = _com_code_to_real.get(code)
-    if exist_real:
-        return exist_real
-    new_real = _XAReal(code)
-    _com_code_to_real[code] = new_real
-    return new_real
+    def _get_session(self):
+        return self._session
+
+    def _get_query(self, tr_cd:str):
+        res_info = self._res_manager.get(tr_cd)
+        if not res_info:
+            self._last_message = f"ResInfo not found: {tr_cd}"
+            return None
+        if not res_info.is_func:
+            self._last_message = f"Incorrect request code: {tr_cd}"
+            return None
+        if tr_cd in ['t1857', 'ChartIndex']:
+            new_query = _XAQuery(res_info)
+            # if tr_cd == 't1857':
+            #     new_query.OnReceiveSearchRealData = lambda _: self._on_realtime(new_query, "t1857")
+            # elif tr_cd == 'ChartIndex':
+            #     new_query.OnReceiveChartRealData = lambda _: self._on_realtime(new_query, "ChartIndex")
+            return new_query
+
+        if res_info != self._query.res_info:
+            self._query.com.ResFileName = res_info.filepath
+            self._query.res_info = res_info
+        return self._query
+
+    def _get_real(self, tr_cd:str):
+        res_info = self._res_manager.get(tr_cd)
+        if not res_info:
+            self._last_message = f"ResInfo not found: {tr_cd}"
+            return None
+        if res_info.is_func:
+            self._last_message = f"Incorrect realtime code: {tr_cd}"
+            return None
+        exist_real = self._code_to_real.get(tr_cd)
+        if exist_real:
+            return exist_real
+        new_real = _XAReal(res_info)
+        new_real.OnReceiveRealData = lambda _: self._on_realtime(new_real, tr_cd)
+        self._code_to_real[tr_cd] = new_real
+        return new_real
+
+    def _on_message(self, msg:str):
+        if self.on_message:
+            self.on_message(msg)
+
+    def _on_realtime(self, obj, tr_cd:str):
+        if self.on_realtime:
+            key = ''
+            datas = {}
+            res_info:ResInfo = obj.res_info
+            if res_info:
+                if tr_cd == "t1857":
+                    outblock = res_info.out_blocks[1]
+                elif tr_cd == "ChartIndex":
+                    outblock = res_info.out_blocks[1]
+                else:
+                    outblock = res_info.out_blocks[0]
+                    if len(res_info.in_blocks[0].fields) > 0:
+                        key = obj.GetFieldData(outblock.name, res_info.in_blocks[0].fields[0].name)
+                for field in outblock.fields:
+                    datas[field.name] = obj.GetFieldData(outblock.name, field.name)
+            self.on_realtime(tr_cd, key, datas)
+
+    @property
+    def last_message(self):
+        return self._last_message
+
+    @property
+    def logined(self):
+        return self._logined
+
+    @property
+    def is_simulation(self):
+        return self._is_simulation
+
+    @property
+    def accounts(self):
+        return self._accounts
+
+    def close(self):
+        if self._logined:
+            self._session.Logout()
+            self._logined = False
+        self._session.DisconnectServer()
+
+    def login(self, user_id:str, user_pwd:str, cert_pwd:str = '', server_ip:str = ''):
+        if self._logined:
+            self._last_message = "Already logined"
+            return True
+        if not server_ip:
+            if cert_pwd:
+                server_ip = self.real_domain
+            else:
+                server_ip = self.simul_domain
+        self._is_simulation = server_ip == self.simul_domain
+        if not self._session.ConnectServer(server_ip, 20001):
+            self._last_message = "ConnectServer failed"
+            return False
+        ok = self._session.Login(user_id, user_pwd, cert_pwd, 0, 0)
+        self._last_message = self._session.last_message
+        if not ok:
+            return False
+
+        self._accounts.clear()
+        for i in range(self._session.GetAccountListCount()):
+            account = AccountInfo()
+            account.number = self._session.GetAccountList(i)
+            account.name = self._session.GetAccountName(account.number)
+            account.detail_name = self._session.GetAcctDetailName(account.number)
+            account.nick_name = self._session.GetAcctNickname(account.number)
+            self._accounts.append(account)
+
+        self._logined = True
+        return True
+
+    def request(self, tr_cd:str, indatas:dict|str|list, next:bool = False) -> ResponseData|None:
+        if tr_cd in ("t1857", "ChartIndex"):
+            self._last_message = f"Use query = XAQuery(\"{tr_cd}\"), and call query.SetFieldData(...) , query.RequestService(...)"
+            return None
+        res_info = self._res_manager.get(tr_cd)
+        if not res_info:
+            self._last_message = f"No res information {tr_cd}."
+            return None
+        query = self._get_query(tr_cd)
+        if not query:
+            return None
+        res_info:ResInfo = query.res_info
+        first_inblock = res_info.in_blocks[0]
+        if isinstance(indatas, dict):
+            for key, val in indatas.items():
+                query.SetFieldData(first_inblock.name, key, 0, val)
+        else:
+            if isinstance(indatas, str):
+                indatas = indatas.split(',')
+            if isinstance(indatas, list):
+                for i, val in enumerate(indatas):
+                    query.SetFieldData(first_inblock.name, first_inblock.fields[i].name, 0, val)
+        request_time = time.time()
+        start_time = time.perf_counter_ns()
+        ret = query.Request(next)
+        self._last_message = query.last_message
+        if ret < 0:
+            return None
+        elapsed_ms = (time.perf_counter_ns() - start_time) / 1_000_000
+        response = ResponseData()
+        response.tr_cd = tr_cd
+        response.cont_yn = query.IsNext
+        response.cont_key = query.ContinueKey
+        response.rsp_cd = query.rsp_code
+        response.rsp_msg = query.rsp_msg
+        response.id = ret
+        response.request_time = request_time
+        response.elapsed_ms = elapsed_ms
+        response.res = res_info
+        response.body = {}
+
+        for block in res_info.out_blocks:
+            if block.is_occurs:
+                body = []
+                for i in range(query.GetBlockCount(block.name)):
+                    row = {}
+                    for field in block.fields:
+                        row[field.name] = query.GetFieldData(block.name, field.name, i)
+                    body.append(row)
+                response.body[block.name] = body
+            else:
+                body = {}
+                for field in block.fields:
+                    body[field.name] = query.GetFieldData(block.name, field.name, 0)
+                response.body[block.name] = body
+
+        return response
+
+    def realtime(self, tr_cd:str, datas:str|list, advise:bool):
+        self._last_message = ""
+        res_info = self._res_manager.get(tr_cd)
+        if not res_info:
+            self._last_message = f"No res information {tr_cd}."
+            return False
+        real = self._get_real(tr_cd)
+        if not real:
+            return False
+        res_info = real.res_info
+        first_inblock = res_info.in_blocks[0]
+        if len(first_inblock.fields) > 0:
+            field_name = first_inblock.fields[0].name
+            if isinstance(datas, str):
+                datas = datas.split(',')
+            if len(datas) > 0:
+                for key in datas:
+                    real.SetFieldData(first_inblock.name, field_name, key)
+                    if advise:
+                        real.AdviseRealData()
+                    else:
+                        real.UnadviseRealDataWithKey()
+            else:
+                if not advise:
+                    real.UnadviseRealData()
+        else:
+            if advise:
+                real.AdviseRealData()
+            else:
+                real.UnadviseRealData()
+        return True
+
+# endregion
