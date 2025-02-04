@@ -4,11 +4,11 @@ build-backend = "hatchling.build"
 
 [project]
 name = "xingAsync"
-version = "0.1.7"
+version = "0.2.0"
 authors = [
   { name="teranum", email="teranum@gmail.com" },
 ]
-description = "package for async XingApi(dll)"
+description = "package for XingApi(DLL,COM)"
 keywords = ["xingapi"]
 readme = "README.md"
 requires-python = ">=3.8"
