@@ -4,7 +4,7 @@
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>2b61bde3-bd81-4a96-8c74-65c0c03d8427</ProjectGuid>
     <ProjectHome>.</ProjectHome>
-    <StartupFile>test\test_COM.py</StartupFile>
+    <StartupFile>test\test_XingCOM.py</StartupFile>
     <SearchPath>src</SearchPath>
     <WorkingDirectory>
     </WorkingDirectory>
@@ -30,9 +30,9 @@
   <ItemGroup>
     <Compile Include="src\xingAsync\MsgIocpProactor.py" />
     <Compile Include="src\xingAsync\xing_com.py" />
-    <Compile Include="test\test_COM.py" />
+    <Compile Include="test\test_XingCOM.py" />
     <Compile Include="test\test_COM_base.py" />
-    <Compile Include="test\test_DLL.py" />
+    <Compile Include="test\test_XingApi.py" />
     <Compile Include="src\xingAsync\async_api.py" />
     <Compile Include="src\xingAsync\models.py" />
     <Compile Include="src\xingAsync\native.py" />
