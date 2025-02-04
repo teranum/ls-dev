@@ -20,7 +20,7 @@ async def sample(api:XingApi):
     for x in api.accounts:
         print(x)
 
-    # 요청: 삼성전자("005930") 현재가 조회
+    # 요청 t1102: 주식 현재가(시세) 조회
     response = await api.request("t1102", {"shcode": "005930"}) # 005930: 삼성전자
     if not response:
         print(f"t1102 request failed: {api.last_message}")
@@ -37,8 +37,7 @@ async def sample(api:XingApi):
     # 실시간 시세 요청/이벤트 처리
     codes = ["005930", "000660"] # 삼성전자, SK하이닉스 실시간 체결 수신
     # codes = ["HSIG25", "HCEIG25"] # 항셍, 미니항셍 실시간 체결 수신, tr_cd: "OVC"
-    if not api.realtime("OVC", codes, True):
-    # if not api.realtime("S3_", codes, True):
+    if not api.realtime("S3_", codes, True):
         return print(f"실시간 요청 실패: {api.last_message}")
 
     print("실시간 요청 성공, 60초동안 실시간 수신...")

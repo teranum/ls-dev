@@ -569,7 +569,7 @@ class XingApi:
         node = XingApi._asyncNode(response.id, callback)
         self._async_nodes.append(node)
         await node.wait()
-        response.elapsed_ms = (time.perf_counter_ns() - start_time) / 1000000
+        response.elapsed_ms = (time.perf_counter_ns() - start_time) / 1000000 # ms: client -> api -> server -> api-> get_data -> client
         self._async_nodes.remove(node)
         if node.async_result == -902:
             self._last_message = "[-902] TIME_OUT"

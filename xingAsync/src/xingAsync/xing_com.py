@@ -41,7 +41,7 @@ class _XASession:
         self.OnDisconnect = None
 
         self._last_message = str()
-        self._event_raised = False
+        self._event_received = False
         self._rsp_code = str()
         self._rsp_msg = str()
 
@@ -70,7 +70,7 @@ class _XASession:
         return self._last_message
     
     def _OnLogin(self, code, msg):
-        self._event_raised = True
+        self._event_received = True
         self._rsp_code = code
         self._rsp_msg = msg
         if self.OnLogin:
@@ -87,9 +87,9 @@ class _XASession:
     def Login(self, szID, szPwd, szCertPwd, nServerType, bShowCertErrDlg):
         if self.OnLogin:
             return self.com.Login(szID, szPwd, szCertPwd, nServerType, bShowCertErrDlg)
-        self._event_raised = False
+        self._event_received = False
         if self.com.Login(szID, szPwd, szCertPwd, nServerType, bShowCertErrDlg):
-            while not self._event_raised:
+            while not self._event_received:
                 pythoncom.PumpWaitingMessages()
             self._last_message = f"[{self._rsp_code}] {self._rsp_msg}"
             return self._rsp_code == "0000"
@@ -109,7 +109,7 @@ class _XAQuery:
         self.res_info = res_info
 
         self._last_message = str()
-        self._event_raised = False
+        self._event_received = False
         self._rsp_code = str()
         self._rsp_msg = str()
         self._rsp_system_error = False
@@ -146,7 +146,7 @@ class _XAQuery:
         return self._last_message
 
     def _OnReceiveData(self, code):
-        self._event_raised = True
+        self._event_received = True
         if self.OnReceiveData:
             self.OnReceiveData(code)
     def _OnReceiveMessage(self, is_system_error, code, msg):
@@ -154,7 +154,7 @@ class _XAQuery:
         self._rsp_code = code
         self._rsp_msg = msg
         if is_system_error:
-            self._event_raised = True
+            self._event_received = True
         if self.OnReceiveMessage:
             self.OnReceiveMessage(is_system_error, code, msg)
     def _OnReceiveChartRealData(self, code):
@@ -181,32 +181,32 @@ class _XAQuery:
         return self._rsp_system_error
 
     def Request(self, next: bool) -> int:
-        self._event_raised = False
-        ret = self.com.Request(next)
-        if ret < 0:
-            self._rsp_code = str(ret)
-            self._rsp_msg = self.GetErrorMessage(ret)
+        self._event_received = False
+        rqid = self.com.Request(next)
+        if rqid < 0:
+            self._rsp_code = str(rqid)
+            self._rsp_msg = self.GetErrorMessage(rqid)
             self._last_message = f"[{self._rsp_code}] {self._rsp_msg}"
-            return ret
+            return rqid
         if not self.OnReceiveData:
-            while not self._event_raised:
+            while not self._event_received:
                 pythoncom.PumpWaitingMessages()
             self._last_message = f"[{self._rsp_code}] {self._rsp_msg}"
-        return ret
+        return rqid
 
     def RequestService(self, code, data):
-        self._event_raised = False
-        ret = self.com.RequestService(code, data)
-        if ret < 0:
-            self._rsp_code = str(ret)
-            self._rsp_msg = self.GetErrorMessage(ret)
+        self._event_received = False
+        rqid = self.com.RequestService(code, data)
+        if rqid < 0:
+            self._rsp_code = str(rqid)
+            self._rsp_msg = self.GetErrorMessage(rqid)
             self._last_message = f"[{self._rsp_code}] {self._rsp_msg}"
-            return ret
+            return rqid
         if not self.OnReceiveData:
-            while not self._event_raised:
+            while not self._event_received:
                 pythoncom.PumpWaitingMessages()
             self._last_message = f"[{self._rsp_code}] {self._rsp_msg}"
-        return ret
+        return rqid
 
 class _XAReal:
     def __init__(self, res_info = None):
@@ -272,6 +272,9 @@ class XingCOM:
         self._session = _XASession()
         self._session.OnDisconnect = lambda: self._inner_on_message('DISCONNECT')
         self._query = _XAQuery()
+        self._t1857 = None #_XAQuery("t1857")
+        self._ChartIndex = None #_XAQuery("ChartIndex")
+        self._real = _XAReal()
         self._code_to_real = {}
         
         self._last_message = str()
@@ -287,6 +290,8 @@ class XingCOM:
         return self._session
 
     def _get_query(self, tr_cd:str):
+        if not tr_cd:
+            return self._query;
         res_info = self._res_manager.get(tr_cd)
         if not res_info:
             self._last_message = f"ResInfo not found: {tr_cd}"
@@ -308,6 +313,8 @@ class XingCOM:
         return self._query
 
     def _get_real(self, tr_cd:str):
+        if not tr_cd:
+            return self._real;
         res_info = self._res_manager.get(tr_cd)
         if not res_info:
             self._last_message = f"ResInfo not found: {tr_cd}"
@@ -324,25 +331,30 @@ class XingCOM:
         return new_real
 
     def _inner_on_message(self, msg:str):
-        self._on_message.emit_signal('LOGOUT')
+        self._on_message.emit_signal(msg)
 
     def _inner_on_realtime(self, obj, tr_cd:str):
-        if self.on_realtime:
-            key = ''
-            datas = {}
-            res_info:ResInfo = obj.res_info
-            if res_info:
-                if tr_cd == "t1857":
-                    outblock = res_info.out_blocks[1]
-                elif tr_cd == "ChartIndex":
-                    outblock = res_info.out_blocks[1]
-                else:
-                    outblock = res_info.out_blocks[0]
-                    if len(res_info.in_blocks[0].fields) > 0:
-                        key = obj.GetFieldData(outblock.name, res_info.in_blocks[0].fields[0].name)
+        key = ''
+        datas = {}
+        res_info:ResInfo = obj.res_info
+        if res_info:
+            if tr_cd == "t1857":
+                key = obj.AlertNum
+                outblock = res_info.out_blocks[1]
+                for field in outblock.fields:
+                    datas[field.name] = obj.GetFieldSearchRealData(outblock.name, field.name)
+            elif tr_cd == "ChartIndex":
+                key = obj.indexid
+                outblock = res_info.out_blocks[1]
+                for field in outblock.fields:
+                    datas[field.name] = obj.GetFieldChartRealData(outblock.name, field.name)
+            else:
+                outblock = res_info.out_blocks[0]
+                if len(res_info.in_blocks[0].fields) > 0:
+                    key = obj.GetFieldData(outblock.name, res_info.in_blocks[0].fields[0].name)
                 for field in outblock.fields:
                     datas[field.name] = obj.GetFieldData(outblock.name, field.name)
-            self._on_realtime.emit_signal(tr_cd, key, datas)
+        self._on_realtime.emit_signal(tr_cd, key, datas)
 
     @property
     def last_message(self):
@@ -405,48 +417,84 @@ class XingCOM:
         return True
 
     def request(self, tr_cd:str, indatas:dict|str|list, next:bool = False) -> ResponseData|None:
-        if tr_cd in ("t1857", "ChartIndex"):
-            self._last_message = f"Use query = XAQuery(\"{tr_cd}\"), and call query.SetFieldData(...) , query.RequestService(...)"
+        if not self._logined:
+            self._last_message = "Not logined"
             return None
-        res_info = self._res_manager.get(tr_cd)
-        if not res_info:
-            self._last_message = f"No res information {tr_cd}."
-            return None
-        query = self._get_query(tr_cd)
+        is_service = tr_cd in ("t1857", "ChartIndex")
+        if is_service:
+            if tr_cd == "t1857":
+                if not self._t1857:
+                    self._t1857 = self._get_query(tr_cd)
+                    self._t1857.OnReceiveSearchRealData = lambda _: self._inner_on_realtime(self._t1857, "t1857")
+                    self._t1857.AlertNum = str()
+                query = self._t1857
+                if query.AlertNum:
+                    query.RemoveService("t1857", query.AlertNum)
+                    query.AlertNum = ""
+            elif tr_cd == "ChartIndex":
+                if not self._ChartIndex:
+                    self._ChartIndex = self._get_query(tr_cd)
+                    self._ChartIndex.OnReceiveChartRealData = lambda _: self._inner_on_realtime(self._ChartIndex, "ChartIndex")
+                    self._ChartIndex.indexid = str()
+                query = self._ChartIndex
+                if query.indexid:
+                    query.RemoveService("ChartIndex", query.indexid)
+                    query.indexid = ""
+        else:
+            query = self._get_query(tr_cd)
         if not query:
             return None
         res_info:ResInfo = query.res_info
+        if not res_info:
+            self._last_message = f"No res information {tr_cd}."
+            return None
         first_inblock = res_info.in_blocks[0]
+        service_data = str()
         if isinstance(indatas, dict):
-            for key, val in indatas.items():
-                query.SetFieldData(first_inblock.name, key, 0, val)
+            if first_inblock.name in indatas:
+                for block_name, block_vals in indatas.items():
+                    if isinstance(block_vals, dict):
+                        for key, val in block_vals.items():
+                            query.SetFieldData(block_name, key, 0, val)
+                    elif isinstance(block_vals, list):
+                        record_count = len(block_vals)
+                        query.SetBlockCount(block_name, record_count)
+                        for i, record_val in enumerate(block_vals):
+                            if isinstance(record_val, dict):
+                                for key, val in record_val.items():
+                                    query.SetFieldData(block_name, key, i, val)
+            else:
+                for key, val in indatas.items():
+                    query.SetFieldData(first_inblock.name, key, 0, val)
         else:
             if isinstance(indatas, str):
                 indatas = indatas.split(',')
             if isinstance(indatas, list):
-                for i, val in enumerate(indatas):
-                    query.SetFieldData(first_inblock.name, first_inblock.fields[i].name, 0, val)
+                if is_service and len(indatas) == 1:
+                    service_data = indatas[0]
+                else:
+                    for i, val in enumerate(indatas):
+                        query.SetFieldData(first_inblock.name, first_inblock.fields[i].name, 0, val)
+            else:
+                self._last_message = f"Invalid data type: {type(indatas)}"
+                return None
         request_time = time.time()
         start_time = time.perf_counter_ns()
-        ret = query.Request(next)
+        if is_service:
+            rqid = query.RequestService(tr_cd, service_data)
+        else:
+            rqid = query.Request(next)
         self._last_message = query.last_message
-        if ret < 0:
+        if rqid < 0:
             return None
-        elapsed_ms = (time.perf_counter_ns() - start_time) / 1_000_000
         response = ResponseData()
-        response.tr_cd = tr_cd
-        response.cont_yn = query.IsNext
-        response.cont_key = query.ContinueKey
-        response.rsp_cd = query.rsp_code
-        response.rsp_msg = query.rsp_msg
-        response.id = ret
-        response.request_time = request_time
-        response.elapsed_ms = elapsed_ms
-        response.res = res_info
         response.body = {}
-
         for block in res_info.out_blocks:
             if block.is_occurs:
+                if res_info.compressable:
+                    comp_yn = query.GetFieldData(first_inblock.name, "comp_yn", 0)
+                    if comp_yn == 'Y':
+                        query.Decompress(block.name)
                 body = []
                 for i in range(query.GetBlockCount(block.name)):
                     row = {}
@@ -459,15 +507,60 @@ class XingCOM:
                 for field in block.fields:
                     body[field.name] = query.GetFieldData(block.name, field.name, 0)
                 response.body[block.name] = body
+        response.elapsed_ms = (time.perf_counter_ns() - start_time) / 1_000_000 # ms: client -> api -> server -> api-> get_data -> client
+        response.tr_cd = tr_cd
+        response.cont_yn = query.IsNext
+        response.cont_key = query.ContinueKey
+        response.rsp_cd = query.rsp_code
+        response.rsp_msg = query.rsp_msg
+        response.id = rqid
+        response.request_time = request_time
+        response.res = res_info
+
+        if is_service:
+            if tr_cd == "t1857":
+                query.AlertNum = query.GetFieldData("t1857OutBlock", "AlertNum", 0)
+            elif tr_cd == "ChartIndex":
+                query.indexid = query.GetFieldData("ChartIndexOutBlock", "indexid", 0)
 
         return response
 
-    def realtime(self, tr_cd:str, datas:str|list, advise:bool):
-        self._last_message = ""
-        res_info = self._res_manager.get(tr_cd)
-        if not res_info:
-            self._last_message = f"No res information {tr_cd}."
+    def remove_service(self, tr_cd: str = "", data: str = ""):
+        if not self._logined:
+            self._last_message = "Not logined"
             return False
+        if not tr_cd:
+            if self._t1857:
+                self._t1857.RemoveService("t1857", self._t1857.AlertNum)
+                self._t1857.AlertNum = ""
+            if self._ChartIndex:
+                self._ChartIndex.RemoveService("ChartIndex", self._ChartIndex.indexid)
+                self._ChartIndex.indexid = ""
+            return True
+        if tr_cd == "t1857":
+            if self._t1857:
+                if not data:
+                    data = self._t1857.AlertNum
+                self._t1857.RemoveService("t1857", data)
+                return True
+        elif tr_cd == "ChartIndex":
+            if self._ChartIndex:
+                if not data:
+                    data = self._ChartIndex.indexid
+                self._ChartIndex.RemoveService("ChartIndex", data)
+                return True
+        self._last_message = f"Service not found: {tr_cd}"
+        return False
+
+    def realtime(self, tr_cd:str, datas:str|list, advise:bool):
+        if not self._logined:
+            self._last_message = "Not logined"
+            return False
+        if not tr_cd and not advise:
+            # all unadvise
+            for real in self._code_to_real.values():
+                real.UnadviseRealData()
+            return True
         real = self._get_real(tr_cd)
         if not real:
             return False
@@ -493,6 +586,13 @@ class XingCOM:
             else:
                 real.UnadviseRealData()
         return True
+
+    def get_requests_count(self, tr_cd: str):
+        per_sec = self._query.GetTRCountPerSec(tr_cd)
+        base_sec = self._query.GetTRCountBaseSec(tr_cd)
+        limit = self._query.GetTRCountLimit(tr_cd)
+        requests = self._query.GetTRCountRequest(tr_cd)
+        return per_sec, base_sec, limit, requests
 
     class _xingSignal:
         def __init__(self):

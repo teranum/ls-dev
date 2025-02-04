@@ -1,12 +1,12 @@
 from xingAsync import XASession, XAQuery, XAReal
 from app_key import user_id, user_pwd, cert_pwd # app_key.py 파일에 사용자 ID, 비번, 공증 비번을 저장해두고 import
 
-########################################################################################
+##########################################################################################################
 # COM 객체 XASession, XAQuery, XAReal 테스트
 # * asyncio를 사용하지 않음, asyncio 이용 어려울 경우 사용 (가능한 DLL 모드 XingApi 이용 권장)
 # * Res파일 경로 설정 필요없음
 # * OnLogin, OnReceiveData 이벤트 처리 필요없음, 실시간 데이터 수신시 OnReceiveRealData 이벤트 처리 필요
-########################################################################################
+##########################################################################################################
 
 def sample():
     # 로그인
@@ -27,9 +27,9 @@ def sample():
         acc_detail = session.GetAcctDetailName(acc_num)
         print(f"{acc_num} {acc_name} {acc_detail}")
 
-    # 요청: 삼성전자("005930") 현재가 조회
+    # 요청 t1102: 주식 현재가(시세) 조회
     query = XAQuery("t1102")
-    query.SetFieldData("t1102InBlock", "shcode", 0, "005930")
+    query.SetFieldData("t1102InBlock", "shcode", 0, "005930") # 005930: 삼성전자
     ret = query.Request(False)
     if ret < 0:
         print(f"t1102 request failed: {query.last_message}")
