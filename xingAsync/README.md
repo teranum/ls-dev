@@ -14,6 +14,10 @@ DLL Wrapper class: XingApi<br/>
 COM Wrapper class: XingCOM<br/>
 COM base classes: XASession, XAQuery, XAReal<br/>
 
+### 통합샘플파일
+- [test/sample_XingApi.py](sample_XingApi.py): DLL모드 XingApi 이용 샘플
+- [test/sample_XingCOM.py](sample_XingCOM.py): COM모드 XingCOM 이용 샘플
+
 ## DLL모드 XingApi 이용, DLL를 이용하기 쉽게 Wrapper
 ### 로그인/요청/실시간 조회
 ```python
@@ -115,11 +119,31 @@ S3_, 005930, {'chetime': '125618', 'sign': '2', 'change': '2100', 'drate': '4.12
 
         # t1102: 주식현재가 요청, 삼성전자 
         response = await api.request("t1102", "005930")
-        # 또는
+        # 또는 필드명을 지정하여 요청
         response = await api.request("t1102", {'shcode': '005930'})
-
+        
         # 성공시 ResponseData 리턴, 실패시 None 리턴 (실패사유는 last_message에 저장됨)
         # 블록타입이 배열이 아닌 경우 dict 로 반환됨, 배열(occurs)인 경우 list[dict] 로 반환됨)
+
+        # 입력은 dict, 문자열, 리스트 형태로 입력 가능
+        # ex) t8407: 주식멀티현재가조회 (입력필드 2개: nrec, shcode)
+        inputs = {"nrec": 2, "shcode": "005930000660"}"}    # ex1) dict로 입력
+        inputs = "2,005930000660" 						    # ex2) 문자열로 입력 (',' 로 구분하여 필드 순서로 입력)
+        inputs = ["2", "005930000660"] 					    # ex3) 리스트로 입력 (필드 순서로 입력)
+
+        # 입력블록이 2개이상인 경우, 블록명을 지정하여 입력
+        inputs = {
+            "t1104InBlock": {
+                "code": "005930",    # 종목코드
+                "nrec": "4",         # 건수
+            },
+            "t1104InBlock1": [
+                {"indx": "0", "gubn": "1", "dat1": "2", "dat2": "1"}, 
+                {"indx": "1", "gubn": "1", "dat1": "3", "dat2": "1"}, 
+                {"indx": "2", "gubn": "4", "dat1": "1", "dat2": "5"}, 
+                {"indx": "3", "gubn": "4", "dat1": "1", "dat2": "20"}, 
+            ],
+        }
 
         # t8410: 주식차트요청 (일주월분), 삼성전자
         inputs = {

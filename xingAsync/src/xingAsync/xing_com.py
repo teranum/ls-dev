@@ -382,6 +382,7 @@ class XingCOM:
 
     def close(self):
         if self._logined:
+            self.remove_service()
             self._session.Logout()
             self._logined = False
         self._session.DisconnectServer()
@@ -530,10 +531,10 @@ class XingCOM:
             self._last_message = "Not logined"
             return False
         if not tr_cd:
-            if self._t1857:
+            if self._t1857 and self._t1857.AlertNum:
                 self._t1857.RemoveService("t1857", self._t1857.AlertNum)
                 self._t1857.AlertNum = ""
-            if self._ChartIndex:
+            if self._ChartIndex and self._ChartIndex.indexid:
                 self._ChartIndex.RemoveService("ChartIndex", self._ChartIndex.indexid)
                 self._ChartIndex.indexid = ""
             return True
@@ -541,13 +542,15 @@ class XingCOM:
             if self._t1857:
                 if not data:
                     data = self._t1857.AlertNum
-                self._t1857.RemoveService("t1857", data)
+                if data:
+                    self._t1857.RemoveService("t1857", data)
                 return True
         elif tr_cd == "ChartIndex":
             if self._ChartIndex:
                 if not data:
                     data = self._ChartIndex.indexid
-                self._ChartIndex.RemoveService("ChartIndex", data)
+                if data:
+                    self._ChartIndex.RemoveService("ChartIndex", data)
                 return True
         self._last_message = f"Service not found: {tr_cd}"
         return False
@@ -572,11 +575,11 @@ class XingCOM:
                 datas = datas.split(',')
             if len(datas) > 0:
                 for key in datas:
-                    real.SetFieldData(first_inblock.name, field_name, key)
                     if advise:
+                        real.SetFieldData(first_inblock.name, field_name, key)
                         real.AdviseRealData()
                     else:
-                        real.UnadviseRealDataWithKey()
+                        real.UnadviseRealDataWithKey(key)
             else:
                 if not advise:
                     real.UnadviseRealData()
