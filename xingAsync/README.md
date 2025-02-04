@@ -15,8 +15,8 @@ COM Wrapper class: XingCOM<br/>
 COM base classes: XASession, XAQuery, XAReal<br/>
 
 ### 통합샘플파일
-- [test/sample_XingApi.py](sample_XingApi.py): DLL모드 XingApi 이용 샘플
-- [test/sample_XingCOM.py](sample_XingCOM.py): COM모드 XingCOM 이용 샘플
+- [test/sample_XingApi.py](test/sample_XingApi.py): DLL모드 XingApi 이용 샘플
+- [test/sample_XingCOM.py](test/sample_XingCOM.py): COM모드 XingCOM 이용 샘플
 
 ## DLL모드 XingApi 이용, DLL를 이용하기 쉽게 Wrapper
 ### 로그인/요청/실시간 조회
