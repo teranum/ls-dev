@@ -1,4 +1,4 @@
-﻿using LS.XingApi.Native;
+using LS.XingApi.Native;
 using System.Collections;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
@@ -220,9 +220,8 @@ namespace LS.XingApi
                 return null;
             }
 
-            var response = new ResponseTrData()
+            var response = new ResponseTrData(res_info.tr_cd)
             {
-                tr_cd = res_info.tr_cd,
                 res = res_info,
             };
 

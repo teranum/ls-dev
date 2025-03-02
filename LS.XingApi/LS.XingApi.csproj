@@ -6,7 +6,7 @@
 		<Nullable>enable</Nullable>
 		<UseWindowsForms>true</UseWindowsForms>
 		<Description>NET wrapper for LS XingApi</Description>
-		<Version>0.0.4</Version>
+		<Version>0.0.5</Version>
 		<Title>LS.XingApi</Title>
 		<PackageTags>LS, eBEST, XingApi</PackageTags>
 		<Authors>teranum</Authors>

@@ -1,4 +1,4 @@
-﻿using System.Reflection;
+using System.Reflection;
 using System.Runtime.InteropServices;
 
 namespace LS.XingApi
@@ -232,7 +232,7 @@ namespace LS.XingApi
                 {
                     var spec_fields = line.Split(';')[0].Split(',').Select(x => x.Trim()).ToArray();
                     var block_name = spec_fields[0];
-                    var block_output = spec_fields[2].Equals("output");
+                    var block_output = spec_fields[2].Equals("output", StringComparison.OrdinalIgnoreCase);
                     var block_occurs = false;
                     for (int i = 3; i < spec_fields.Length; i++)
                     {
@@ -311,7 +311,7 @@ namespace LS.XingApi
                         if (spec_fields.Length < 3)
                             break;
                         var block_name = spec_fields[0];
-                        var block_output = spec_fields[2].Equals("output");
+                        var block_output = spec_fields[2].Equals("output", StringComparison.OrdinalIgnoreCase);
                         var block_occurs = false;
                         for (int i = 3; i < spec_fields.Length; i++)
                         {
