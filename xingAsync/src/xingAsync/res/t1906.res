@@ -113,6 +113,9 @@ BEGIN_FUNCTION_MAP
 		시가,open,open,long,8;
 		고가,high,high,long,8;
 		저가,low,low,long,8;
+		중간가격,midprice,midprice,long,8;
+		매도중간가잔량합계수량,offermidsumrem,offermidsumrem,long,9;
+		매수중간가잔량합계수량,bidmidsumrem,bidmidsumrem,long,9;
 	end
 	END_DATA_MAP
 END_FUNCTION_MAP

@@ -18,6 +18,7 @@ BEGIN_FUNCTION_MAP
 		예상매도호가수량,	yofferrem0,		yofferrem0,		long,	12;
 		예상매수호가수량,	ybidrem0,		ybidrem0,		long,	12;
 		단축코드,			shcode,			shcode,			char,	6;
+		거래소명,           exchname,       exchname,       char,   3;
     end
     END_DATA_MAP
 END_FUNCTION_MAP

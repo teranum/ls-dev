@@ -9,6 +9,7 @@ BEGIN_FUNCTION_MAP
 		일자,date,date,char,8;
 		시간,time,time,char,6;
 		IDXCTS(9999:차트),cts_idx,cts_idx,long,4;
+		거래소구분코드,exchgubun,exchgubun,char,1;
 	end
 	t1637OutBlock,출력,output;
 	begin
@@ -30,6 +31,7 @@ BEGIN_FUNCTION_MAP
 		매도수량,offervolume,offervolume,long,12;
 		매수수량,stksvolume,stksvolume,long,12;
 		종목코드,shcode,shcode,char,6;
+		거래소별단축코드,ex_shcode,ex_shcode,char,10;
 	end
 	END_DATA_MAP
 END_FUNCTION_MAP

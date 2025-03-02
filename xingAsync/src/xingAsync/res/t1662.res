@@ -6,6 +6,7 @@ BEGIN_FUNCTION_MAP
 		구분,gubun,gubun,char,1;
 		금액수량구분,gubun1,gubun1,char,1;
 		전일구분,gubun3,gubun3,char,1;
+		거래소구분코드,exchgubun,exchgubun,char,1;
 	end
 	t1662OutBlock,출력,output,occurs;
 	begin

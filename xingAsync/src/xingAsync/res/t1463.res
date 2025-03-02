@@ -1,5 +1,5 @@
 BEGIN_FUNCTION_MAP
-	.Func,거래대금상위(t1463),t1463,attr,block,headtype=A;
+.Func,거래대금상위(t1463),t1463,attr,block,headtype=A;
 	BEGIN_DATA_MAP
 	t1463InBlock,기본입력,input;
 	begin
@@ -11,6 +11,7 @@ BEGIN_FUNCTION_MAP
 		거래량,volume,volume,long,12;
 		IDX,idx,idx,long,4;
 		대상제외2,jc_num2,jc_num2,long,12;
+		거래소구분코드,exchgubun,exchgubun,char,1;
 	end
 	t1463OutBlock,출력,output;
 	begin
@@ -22,15 +23,15 @@ BEGIN_FUNCTION_MAP
 		현재가,price,price,long,8;
 		전일대비구분,sign,sign,char,1;
 		전일대비,change,change,long,8;
-		등락율,diff,diff,float,6.2;
+		등락율,diff,diff,double,6.2;
 		누적거래량,volume,volume,long,12;
 		거래대금,value,value,long,12;
 		전일거래대금,jnilvalue,jnilvalue,long,12;
-		전일비,bef_diff,bef_diff,float,10.2;
+		전일비,bef_diff,bef_diff,double,10.2;
 		종목코드,shcode,shcode,char,6;
 		filler,filler,filler,char,1;
 		전일거래량,jnilvolume,jnilvolume,long,12;
+		거래소별단축코드,ex_shcode,ex_shcode,char,10;
 	end
 	END_DATA_MAP
 END_FUNCTION_MAP
-

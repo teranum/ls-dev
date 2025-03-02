@@ -14,6 +14,7 @@ BEGIN_FUNCTION_MAP
 		단축코드(KEY)									,	shcode		,	shcode		,	char,	6;
 		참조코드(미사용)								,	ref_shcode,		ref_shcode,		char,	6;
 		시간											,	time,			time,			char,	6;
+		거래소명                                        ,   exchname,       exchname,       char,   3;
     end
     END_DATA_MAP
 END_FUNCTION_MAP

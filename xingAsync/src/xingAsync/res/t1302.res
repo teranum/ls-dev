@@ -1,12 +1,13 @@
 BEGIN_FUNCTION_MAP
-	.Func,주식분별주가조회(t1302),t1302,attr,block,headtype=A;
+.Func,주식분별주가조회(t1302),t1302,attr,block,headtype=A;
 	BEGIN_DATA_MAP
 	t1302InBlock,기본입력,input;
 	begin
 		단축코드,shcode,shcode,char,6;
 		작업구분,gubun,gubun,char,1;
 		시간,time,time,char,6;
-		건수,cnt,cnt,int,3;
+		건수,cnt,cnt,long,3;
+		거래소구분코드,exchgubun,exchgubun,char,1;
 	end
 	t1302OutBlock,출력,output;
 	begin
@@ -18,8 +19,8 @@ BEGIN_FUNCTION_MAP
 		종가,close,close,long,8;
 		전일대비구분,sign,sign,char,1;
 		전일대비,change,change,long,8;
-		등락율,diff,diff,float,6.2;
-		체결강도,chdegree,chdegree,float,8.2;
+		등락율,diff,diff,double,6.2;
+		체결강도,chdegree,chdegree,double,8.2;
 		매도체결수량,mdvolume,mdvolume,long,12;
 		매수체결수량,msvolume,msvolume,long,12;
 		순매수체결량,revolume,revolume,long,12;
@@ -40,4 +41,3 @@ BEGIN_FUNCTION_MAP
 	end
 	END_DATA_MAP
 END_FUNCTION_MAP
-

@@ -10,11 +10,13 @@ BEGIN_FUNCTION_MAP
 		CTSIDX,cts_idx,cts_idx,long,4;
 		조회건수,cnt,cnt,int,3;
 		업종코드,upcode,upcode,char,3;
+		거래소구분코드,exchgubun,exchgubun,char,1;
 	end
 	t1603OutBlock,출력,output;
 	begin
 		CTSIDX,cts_idx,cts_idx,long,4;
 		CTSTIME,cts_time,cts_time,char,8;
+		거래소별업종코드,ex_upcode,ex_upcode,char,4;
 	end
 	t1603OutBlock1,출력1,output,occurs;
 	begin

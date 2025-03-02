@@ -3,11 +3,13 @@ BEGIN_FUNCTION_MAP
 	BEGIN_DATA_MAP
 	t1617InBlock,기본입력,input;
 	begin
-		시장구분(1:코스피2:코스닥3:선물4:콜옵션5:풋옵션6:주식선물),gubun1,gubun1,char,1;
+		시장구분(1:코스피2:코스닥3:선물4:콜5:풋6:주식선물7:V선물8:M선물9:M콜0:M풋E:유로스톡스),gubun1,gubun1,char,1;
 		수량금액구분(1:수량2:금액),gubun2,gubun2,char,1;
 		일자구분(1:시간대별2:일별),gubun3,gubun3,char,1;
 		CTSDATE(연속키값-일자),cts_date,cts_date,char,8;
 		CTSTIME(연속키값-시간),cts_time,cts_time,char,8;
+		직전대비증감(C:직전대비),gubun4,gubun4,char,1;
+		거래소구분코드,exchgubun,exchgubun,char,1;
 	end
 	t1617OutBlock,기본출력,output;
 	begin

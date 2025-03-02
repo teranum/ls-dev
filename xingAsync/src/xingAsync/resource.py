@@ -1,4 +1,4 @@
-﻿from enum import Enum
+from enum import Enum
 import os
 import __main__
 
@@ -116,7 +116,7 @@ class ResInfo:
             elif readState == ResInfo.RESFILE_READ_STATE.FOUNDED_BEGIN_DATA_MAP:
                 spec_fields = [x.strip() for x in line.split(';')[0].split(',')]
                 block_name = spec_fields[0]
-                block_output = spec_fields[2] == "output"
+                block_output = spec_fields[2] in ["output", "Output"]
                 block_occurs = len(spec_fields) > 3 and "occurs" in spec_fields[3:]
 
                 blockSpec = BlockSpec(block_name, block_output, block_occurs)
@@ -159,7 +159,7 @@ class ResInfo:
                 else:
                     spec_fields = [x.strip() for x in line.split(';')[0].split(',')]
                     block_name = spec_fields[0]
-                    block_output = spec_fields[2] == "output"
+                    block_output = spec_fields[2] in ["output", "Output"]
                     block_occurs = len(spec_fields) > 3 and "occurs" in spec_fields[3:]
 
                     blockSpec = BlockSpec(block_name, block_output, block_occurs)

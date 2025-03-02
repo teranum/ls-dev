@@ -9,11 +9,13 @@ BEGIN_FUNCTION_MAP
 		단위구분(1:일2:주3:월),gubun3,gubun3,char,1;
 		시작날짜,from_date,from_date,char,8;
 		종료날짜,to_date,to_date,char,8;
+		거래소구분코드,exchgubun,exchgubun,char,1;
 	end
 	t1665OutBlock,기본출력,output;
 	begin
 		시장코드,mcode,mcode,char,8;
 		시장명,mname,mname,char,20;
+		거래소별업종코드,ex_upcode,ex_upcode,char,4;
 	end
 	t1665OutBlock1,출력1,output,occurs;
 	begin

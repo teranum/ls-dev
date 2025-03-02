@@ -1,5 +1,5 @@
 BEGIN_FUNCTION_MAP
-.Feed, KOSPI호가잔량(H1), H1_, attr, key=6, group=1;
+.Feed, KOSPI호가잔량(H1), H1_, attr, key=6, group=4;
     BEGIN_DATA_MAP
     InBlock,입력,input;
     begin
@@ -53,7 +53,12 @@ BEGIN_FUNCTION_MAP
         동시호가구분,	    donsigubun,	    donsigubun,		char,	1;
 		단축코드,			shcode,			shcode,			char,	6;
 		배분적용구분,		alloc_gubun,	alloc_gubun,	char,	1;
-		누적거래량,			volume,			volume,			long,	12;
+		누적거래량,         volume,         volume,         long,   12;
+        중간가격,                       midprice,       midprice,       long,   8;
+        매도중간가잔량합계수량,         offermidsumrem, offermidsumrem, long,   9;
+        매수중간가잔량합계수량,         bidmidsumrem,   bidmidsumrem,   long,   9;
+        중간가잔량합계수량,             midsumrem,      midsumrem,      long,   9;
+        중간가잔량구분(' '없음'1'매도'2'매수),             midsumremgubun, midsumremgubun, char,   1;
     end
     END_DATA_MAP
 END_FUNCTION_MAP

@@ -1,5 +1,5 @@
 BEGIN_FUNCTION_MAP
-	.Func,주식현재가호가조회(t1101),t1101,attr,block,headtype=A;
+.Func,주식현재가호가조회(t1101),t1101,attr,block,headtype=A;
 	BEGIN_DATA_MAP
 	t1101InBlock,기본입력,input;
 	begin
@@ -11,9 +11,9 @@ BEGIN_FUNCTION_MAP
 		현재가,price,price,long,8;
 		전일대비구분,sign,sign,char,1;
 		전일대비,change,change,long,8;
-		등락율,diff,diff,float,6.2;
+		등락율,diff,diff,double,6.2;
 		누적거래량,volume,volume,long,12;
-		전일종가,jnilclose,jnilclose,long,8;
+		전일종가(기준가),jnilclose,jnilclose,long,8;
 		매도호가1,offerho1,offerho1,long,8;
 		매수호가1,bidho1,bidho1,long,8;
 		매도호가수량1,offerrem1,offerrem1,long,12;
@@ -83,7 +83,7 @@ BEGIN_FUNCTION_MAP
 		예상체결수량,yevolume,yevolume,long,12;
 		예상체결전일구분,yesign,yesign,char,1;
 		예상체결전일대비,yechange,yechange,long,8;
-		예상체결등락율,yediff,yediff,float,6.2;
+		예상체결등락율,yediff,yediff,double,6.2;
 		시간외매도잔량,tmoffer,tmoffer,long,12;
 		시간외매수잔량,tmbid,tmbid,long,12;
 		동시구분,ho_status,ho_status,char,1;
@@ -93,7 +93,11 @@ BEGIN_FUNCTION_MAP
 		시가,open,open,long,8;
 		고가,high,high,long,8;
 		저가,low,low,long,8;
+		KRX중간가격,krx_midprice,krx_midprice,long,8;
+		KRX매도중간가잔량합계수량,krx_offermidsumrem,krx_offermidsumrem,long,9;
+		KRX매수중간가잔량합계수량,krx_bidmidsumrem,krx_bidmidsumrem,long,9;
+		KRX중간가잔량합계수량,krx_midsumrem,krx_midsumrem,long,9;
+		KRX중간가잔량구분(''없음'1'매도'2'매,krx_midsumremgubun,krx_midsumremgubun,char,1;
 	end
 	END_DATA_MAP
 END_FUNCTION_MAP
-

@@ -8,6 +8,7 @@ BEGIN_FUNCTION_MAP
 		정렬기준,gubun2,gubun2,char,1;
 		종목코드,shcode,shcode,char,6;
 		IDXCTS,cts_idx,cts_idx,long,4;
+		거래소구분코드,exchgubun,exchgubun,char,1;
 	end
 	t1636OutBlock,출력,output;
 	begin
@@ -31,6 +32,7 @@ BEGIN_FUNCTION_MAP
 		시가총액,sgta,sgta,long,15;
 		비중,rate,rate,float,6.2;
 		종목코드,shcode,shcode,char,6;
+		거래소별단축코드,ex_shcode,ex_shcode,char,10;
 	end
 	END_DATA_MAP
 END_FUNCTION_MAP

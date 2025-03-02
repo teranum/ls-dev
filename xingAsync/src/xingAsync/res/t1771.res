@@ -10,6 +10,7 @@ BEGIN_FUNCTION_MAP
 		거래원날짜2,traddate2,traddate2,char,8;
 		CTSIDX,cts_idx,cts_idx,long,4;
 		요청건수,cnt,cnt,int,3;
+		거래소구분,exchgubun,exchgubun,char,1;
 	end
 	t1771OutBlock,기본출력,output;
 	begin
@@ -32,6 +33,8 @@ BEGIN_FUNCTION_MAP
 		누적순매수,tradmttvolume,tradmttvolume,long,12;
 		평균단가,tradavg,tradavg,long,8;
 		누적평균단가,tradmttavg,tradmttavg,long,8;
+		거래소명,exchname,exchname,char,3;
+		거래소별단축코드,ex_shcode,ex_shcode,char,10;
 	end
 	END_DATA_MAP
 END_FUNCTION_MAP

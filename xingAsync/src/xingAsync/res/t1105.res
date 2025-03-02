@@ -1,9 +1,10 @@
 BEGIN_FUNCTION_MAP
-	.Func,주식피못/디마크조회(t1105),t1105,attr,block,headtype=A;
+.Func,주식피못/디마크조회(t1105),t1105,attr,block,headtype=A;
 	BEGIN_DATA_MAP
 	t1105InBlock,기본입력,input;
 	begin
 		단축코드,shcode,shcode,char,6;
+		거래소구분코드,exchgubun,exchgubun,char,1;
 	end
 	t1105OutBlock,출력,output;
 	begin
@@ -19,4 +20,3 @@ BEGIN_FUNCTION_MAP
 	end
 	END_DATA_MAP
 END_FUNCTION_MAP
-

@@ -6,6 +6,7 @@ BEGIN_FUNCTION_MAP
 		구분,gubun1,gubun1,char,1;
 		종목코드,shcode,shcode,char,6;
 		정렬,gubun2,gubun2,char,1;
+		거래소구분코드,exchgubun,exchgubun,char,1;
 	end
 	t1638OutBlock,출력,output,occurs;
 	begin

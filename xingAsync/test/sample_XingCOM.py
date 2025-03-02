@@ -176,6 +176,7 @@ class MainWindow(QMainWindow, form_class):
                     "t1104InBlock": {
                         "code": "005930",    # 종목코드
                         "nrec": "4",         # 건수
+                        "exchgubun": "K",    # K:KRX, N:NXT, U:통합, 그외 입력값은 KRX로 처리
                     },
                     "t1104InBlock1": [
                         {"indx": "0", "gubn": "1", "dat1": "2", "dat2": "1"}, 
@@ -251,6 +252,7 @@ class MainWindow(QMainWindow, form_class):
                     "date": "",         # 날짜 (처음 조회시는 Space, 연속 조회시에 이전 조회한 OutBlock의 date 값으로 설정)
                     "idx": 0,           # IDX (사용안함)
                     "cnt": 10,          # 건수 (1이상)
+                    "exchgubun": "K",    # K:KRX, N:NXT, U:통합, 그외 입력값은 KRX로 처리
                 }
                 response = api.request("t1305", inputs)
 

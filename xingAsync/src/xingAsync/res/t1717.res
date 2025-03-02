@@ -7,6 +7,8 @@ BEGIN_FUNCTION_MAP
 		구분(0:일간순매수1:기간누적순매수),gubun,gubun,char,1;
 		시작일자(일간조회일경우는space),fromdt,fromdt,char,8;
 		종료일자,todt,todt,char,8;
+		단가구분(0:전체1:매수혹은매도단가),dan_gb,dan_gb,char,1;
+거래소구분코드,exchgubun,exchgubun,char,1;
 	end
 	t1717OutBlock,출력,output,occurs;
 	begin

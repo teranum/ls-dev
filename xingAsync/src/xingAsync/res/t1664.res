@@ -7,6 +7,7 @@ BEGIN_FUNCTION_MAP
 		금액수량구분,vagubun,vagubun,char,1;
 		시간일별구분,bdgubun,bdgubun,char,1;
 		조회건수,cnt,cnt,int,3;
+		거래소구분코드,exchgubun,exchgubun,char,1;
 	end
 	t1664OutBlock1,출력1,output,occurs;
 	begin

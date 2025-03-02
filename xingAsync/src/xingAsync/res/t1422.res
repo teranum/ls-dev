@@ -1,5 +1,5 @@
 BEGIN_FUNCTION_MAP
-	.Func,상/하한(t1422),t1422,attr,block,headtype=A;
+.Func,상/하한(t1422),t1422,attr,block,headtype=A;
 	BEGIN_DATA_MAP
 	t1422InBlock,기본입력,input;
 	begin
@@ -12,6 +12,8 @@ BEGIN_FUNCTION_MAP
 		종료가격,eprice,eprice,long,8;
 		거래량,volume,volume,long,12;
 		IDX,idx,idx,long,4;
+		전일상하한제외(C:제외),jshex,jshex,char,1;
+		거래소구분코드,exchgubun,exchgubun,char,1;
 	end
 	t1422OutBlock,출력,output;
 	begin
@@ -24,16 +26,16 @@ BEGIN_FUNCTION_MAP
 		현재가,price,price,long,8;
 		전일대비구분,sign,sign,char,1;
 		전일대비,change,change,long,8;
-		등락율,diff,diff,float,6.2;
+		등락율,diff,diff,double,6.2;
 		누적거래량,volume,volume,long,12;
-		거래증가율,diff_vol,diff_vol,float,10.2;
+		거래증가율,diff_vol,diff_vol,double,10.2;
 		매도잔량,offerrem1,offerrem1,long,12;
 		매수잔량,bidrem1,bidrem1,long,12;
 		최종진입,last,last,char,6;
 		연속,lmtdaycnt,lmtdaycnt,long,8;
 		전일거래량,jnilvolume,jnilvolume,long,12;
 		종목코드,shcode,shcode,char,6;
+		거래소별단축코드,ex_shcode,ex_shcode,char,10;
 	end
 	END_DATA_MAP
 END_FUNCTION_MAP
-

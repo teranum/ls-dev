@@ -73,6 +73,9 @@ BEGIN_FUNCTION_MAP
 		총매수호가잔량,		totbidrem,		totbidrem,		long,	9;
         동시호가구분,	    donsigubun,	    donsigubun,		char,	1;
 		배분적용구분,		alloc_gubun,	alloc_gubun,	char,	1;
+        중간가격,                       midprice,       midprice,       long,   8;
+        매도중간가잔량합계수량,         offermidsumrem, offermidsumrem, long,   9;
+        매수중간가잔량합계수량,         bidmidsumrem,   bidmidsumrem,   long,   9;
     end
     END_DATA_MAP
 END_FUNCTION_MAP

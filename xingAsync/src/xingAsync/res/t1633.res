@@ -11,6 +11,7 @@ BEGIN_FUNCTION_MAP
 		to일자,tdate,tdate,char,8;
 		직전대비증감구분,gubun4,gubun4,char,1;
 		날짜,date,date,char,8;
+		거래소구분코드,exchgubun,exchgubun,char,1;
 	end
 	t1633OutBlock,출력,output;
 	begin

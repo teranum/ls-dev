@@ -8,6 +8,7 @@ BEGIN_FUNCTION_MAP
 		조회날짜2,traddate2,traddate2,char,8;
 		외국계구분,fwgubun1,fwgubun1,char,1;
 		CTSIDX,cts_idx,cts_idx,long,4;
+		거래소구분코드,exchgubun,exchgubun,char,1;
 	end
 	t1752OutBlock,기본출력,output;
 	begin

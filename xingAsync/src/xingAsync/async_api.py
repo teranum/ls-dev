@@ -233,6 +233,7 @@ class XingApi:
                     "t1104InBlock": {
                         "code": "005930",    # 종목코드
                         "nrec": "4",         # 건수
+                        "exchgubun": "K",    # K:KRX, N:NXT, U:통합, 그외 입력값은 KRX로 처리
                     },
                     "t1104InBlock1": [
                         {"indx": "0", "gubn": "1", "dat1": "2", "dat2": "1"}, 

@@ -4,6 +4,7 @@ BEGIN_FUNCTION_MAP
 	t1640InBlock,기본입력,input;
 	begin
 		구분,gubun,gubun,char,2;
+		거래소구분코드,exchgubun,exchgubun,char,1;
 	end
 	t1640OutBlock,출력,output;
 	begin

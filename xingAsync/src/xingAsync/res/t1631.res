@@ -7,6 +7,7 @@ BEGIN_FUNCTION_MAP
 		일자구분,dgubun,dgubun,char,1;
 		시작일자,sdate,sdate,char,8;
 		종료일자,edate,edate,char,8;
+		거래소구분코드,exchgubun,exchgubun,char,1;
 	end
 	t1631OutBlock,출력,output;
 	begin

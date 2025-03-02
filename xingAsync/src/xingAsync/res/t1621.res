@@ -4,9 +4,10 @@ BEGIN_FUNCTION_MAP
 	t1621InBlock,기본입력,input;
 	begin
 		업종코드,upcode,upcode,char,3;
-		N분,nmin,nmin,int,2;
-		조회건수,cnt,cnt,int,3;
+		N분,nmin,nmin,long,2;
+		조회건수,cnt,cnt,long,3;
 		전일분,bgubun,bgubun,char,1;
+		거래소구분코드,exchgubun,exchgubun,char,1;
 	end
 	t1621OutBlock,기본출력,output;
 	begin
@@ -24,6 +25,7 @@ BEGIN_FUNCTION_MAP
 		사모펀드투자자코드,pefcode,pefcode,char,4;
 		기준지수코드,jisucd,jisucd,char,8;
 		기준지수명,jisunm,jisunm,char,20;
+		거래소별업종코드,ex_upcode,ex_upcode,char,4;
 	end
 	t1621OutBlock1,출력1,output,occurs;
 	begin
@@ -54,7 +56,7 @@ BEGIN_FUNCTION_MAP
 		국가순매수거래대금,natmsamt,natmsamt,double,12.0;
 		사모펀드순매수거래량,pefmsvol,pefmsvol,long,8;
 		사모펀드순매수거래대금,pefmsamt,pefmsamt,double,12.0;
-		기준지수,upclose,upclose,float,6.2;
+		기준지수,upclose,upclose,double,6.2;
 		기준체결거래량,upcvolume,upcvolume,long,8;
 		기준누적거래량,upvolume,upvolume,double,12.0;
 		기준거래대금,upvalue,upvalue,double,12.0;

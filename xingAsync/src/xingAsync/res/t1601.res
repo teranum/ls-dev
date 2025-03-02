@@ -7,6 +7,7 @@ BEGIN_FUNCTION_MAP
 		옵션금액수량구분2,gubun2,gubun2,char,1;
 		금액단위,gubun3,gubun3,char,1;
 		선물금액수량구분4,gubun4,gubun4,char,1;
+		거래소구분코드,exchgubun,exchgubun,char,1;
 	end
 	t1601OutBlock1,기본출력1,output;
 	begin

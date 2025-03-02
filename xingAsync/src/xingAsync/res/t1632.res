@@ -8,17 +8,19 @@ BEGIN_FUNCTION_MAP
 		직전대비증감,gubun2,gubun2,char,1;
 		전일구분,gubun3,gubun3,char,1;
 		일자,date,date,char,8;
-		시간,time,time,char,6;
+		시간,time,time,char,8;
+		거래소구분코드,exchgubun,exchgubun,char,1;
 	end
 	t1632OutBlock,출력,output;
 	begin
 		날짜CTS,date,date,char,8;
-		시간CTS,time,time,char,6;
+		시간CTS,time,time,char,8
 		IDX,idx,idx,long,4;
+		거래소별구분코드,ex_gubun,ex_gubun,char,2;
 	end
 	t1632OutBlock1,출력1,output,occurs;
 	begin
-		시간,time,time,char,6;
+		시간,time,time,char,8;
 		KP200,k200jisu,k200jisu,float,6.2;
 		대비구분,sign,sign,char,1;
 		대비,change,change,float,6.2;

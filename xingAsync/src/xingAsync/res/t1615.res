@@ -5,6 +5,7 @@ BEGIN_FUNCTION_MAP
 	begin
 		주식구분,gubun1,gubun1,char,1;
 		옵션구분,gubun2,gubun2,char,1;
+		거래소구분코드,exchgubun,exchgubun,char,1;
 	end
 	t1615OutBlock,출력,output;
 	begin

@@ -8,6 +8,8 @@ This is a simple package for XingApi (DLL and COM mode).
 pip install xingAsync
 ```
 
+대체거래서 출범관련 TR변경으로 xingAsync 0.3.0 이상 사용. (2025.03.02 업데이트)
+
 ## Usage
 DLL, COM 모드 지원. (DLL 권장)<br/>
 DLL Wrapper class: XingApi<br/>
@@ -136,6 +138,7 @@ S3_, 005930, {'chetime': '125618', 'sign': '2', 'change': '2100', 'drate': '4.12
             "t1104InBlock": {
                 "code": "005930",    # 종목코드
                 "nrec": "4",         # 건수
+                "exchgubun": "K",    # K:KRX, N:NXT, U:통합, 그외 입력값은 KRX로 처리
             },
             "t1104InBlock1": [
                 {"indx": "0", "gubn": "1", "dat1": "2", "dat2": "1"}, 

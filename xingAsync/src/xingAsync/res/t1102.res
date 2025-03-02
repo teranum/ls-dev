@@ -1,9 +1,10 @@
 BEGIN_FUNCTION_MAP
-	.Func,주식현재가(시세)조회(t1102),t1102,attr,block,headtype=A;
+.Func,주식현재가(시세)조회(t1102),t1102,attr,block,headtype=A;
 	BEGIN_DATA_MAP
 	t1102InBlock,기본입력,input;
 	begin
 		단축코드,shcode,shcode,char,6;
+		거래소구분코드,exchgubun,exchgubun,char,1;
 	end
 	t1102OutBlock,출력,output;
 	begin
@@ -11,7 +12,7 @@ BEGIN_FUNCTION_MAP
 		현재가,price,price,long,8;
 		전일대비구분,sign,sign,char,1;
 		전일대비,change,change,long,8;
-		등락율,diff,diff,float,6.2;
+		등락율,diff,diff,double,6.2;
 		누적거래량,volume,volume,long,12;
 		기준가(평가가격),recprice,recprice,long,8;
 		가중평균,avg,avg,long,8;
@@ -29,9 +30,9 @@ BEGIN_FUNCTION_MAP
 		52최고가일,high52wdate,high52wdate,char,8;
 		52최저가,low52w,low52w,long,8;
 		52최저가일,low52wdate,low52wdate,char,8;
-		소진율,exhratio,exhratio,float,6.2;
-		PER,per,per,float,6.2;
-		PBRX,pbrx,pbrx,float,6.2;
+		소진율,exhratio,exhratio,double,6.2;
+		PER,per,per,double,6.2;
+		PBRX,pbrx,pbrx,double,6.2;
 		상장주식수(천),listing,listing,long,12;
 		증거금율,jkrate,jkrate,long,8;
 		수량단위,memedan,memedan,char,5;
@@ -43,8 +44,8 @@ BEGIN_FUNCTION_MAP
 		총매수수량1,svol1,svol1,long,8;
 		매도증감1,dcha1,dcha1,long,8;
 		매수증감1,scha1,scha1,long,8;
-		매도비율1,ddiff1,ddiff1,float,6.2;
-		매수비율1,sdiff1,sdiff1,float,6.2;
+		매도비율1,ddiff1,ddiff1,double,6.2;
+		매수비율1,sdiff1,sdiff1,double,6.2;
 		매도증권사코드2,offernocd2,offernocd2,char,3;
 		매수증권사코드2,bidnocd2,bidnocd2,char,3;
 		매도증권사명2,offerno2,offerno2,char,6;
@@ -53,8 +54,8 @@ BEGIN_FUNCTION_MAP
 		총매수수량2,svol2,svol2,long,8;
 		매도증감2,dcha2,dcha2,long,8;
 		매수증감2,scha2,scha2,long,8;
-		매도비율2,ddiff2,ddiff2,float,6.2;
-		매수비율2,sdiff2,sdiff2,float,6.2;
+		매도비율2,ddiff2,ddiff2,double,6.2;
+		매수비율2,sdiff2,sdiff2,double,6.2;
 		매도증권사코드3,offernocd3,offernocd3,char,3;
 		매수증권사코드3,bidnocd3,bidnocd3,char,3;
 		매도증권사명3,offerno3,offerno3,char,6;
@@ -63,8 +64,8 @@ BEGIN_FUNCTION_MAP
 		총매수수량3,svol3,svol3,long,8;
 		매도증감3,dcha3,dcha3,long,8;
 		매수증감3,scha3,scha3,long,8;
-		매도비율3,ddiff3,ddiff3,float,6.2;
-		매수비율3,sdiff3,sdiff3,float,6.2;
+		매도비율3,ddiff3,ddiff3,double,6.2;
+		매수비율3,sdiff3,sdiff3,double,6.2;
 		매도증권사코드4,offernocd4,offernocd4,char,3;
 		매수증권사코드4,bidnocd4,bidnocd4,char,3;
 		매도증권사명4,offerno4,offerno4,char,6;
@@ -73,8 +74,8 @@ BEGIN_FUNCTION_MAP
 		총매수수량4,svol4,svol4,long,8;
 		매도증감4,dcha4,dcha4,long,8;
 		매수증감4,scha4,scha4,long,8;
-		매도비율4,ddiff4,ddiff4,float,6.2;
-		매수비율4,sdiff4,sdiff4,float,6.2;
+		매도비율4,ddiff4,ddiff4,double,6.2;
+		매수비율4,sdiff4,sdiff4,double,6.2;
 		매도증권사코드5,offernocd5,offernocd5,char,3;
 		매수증권사코드5,bidnocd5,bidnocd5,char,3;
 		매도증권사명5,offerno5,offerno5,char,6;
@@ -83,15 +84,15 @@ BEGIN_FUNCTION_MAP
 		총매수수량5,svol5,svol5,long,8;
 		매도증감5,dcha5,dcha5,long,8;
 		매수증감5,scha5,scha5,long,8;
-		매도비율5,ddiff5,ddiff5,float,6.2;
-		매수비율5,sdiff5,sdiff5,float,6.2;
+		매도비율5,ddiff5,ddiff5,double,6.2;
+		매수비율5,sdiff5,sdiff5,double,6.2;
 		외국계매도합계수량,fwdvl,fwdvl,long,12;
 		외국계매도직전대비,ftradmdcha,ftradmdcha,long,12;
-		외국계매도비율,ftradmddiff,ftradmddiff,float,6.2;
+		외국계매도비율,ftradmddiff,ftradmddiff,double,6.2;
 		외국계매수합계수량,fwsvl,fwsvl,long,12;
 		외국계매수직전대비,ftradmscha,ftradmscha,long,12;
-		외국계매수비율,ftradmsdiff,ftradmsdiff,float,6.2;
-		회전율,vol,vol,float,6.2;
+		외국계매수비율,ftradmsdiff,ftradmsdiff,double,6.2;
+		회전율,vol,vol,double,6.2;
 		단축코드,shcode,shcode,char,6;
 		누적거래대금,value,value,long,12;
 		전일동시간거래량,jvolume,jvolume,long,12;
@@ -112,24 +113,24 @@ BEGIN_FUNCTION_MAP
 		전분기영업이익,bfoperatingincome,bfoperatingincome,long,12;
 		전분기경상이익,bfordinaryincome,bfordinaryincome,long,12;
 		전분기순이익,bfnetincome,bfnetincome,long,12;
-		전분기EPS,bfeps,bfeps,float,13.2;
+		전분기EPS,bfeps,bfeps,double,13.2;
 		전전분기명,name2,name2,char,10;
 		전전분기매출액,bfsales2,bfsales2,long,12;
 		전전분기영업이익,bfoperatingincome2,bfoperatingincome2,long,12;
 		전전분기경상이익,bfordinaryincome2,bfordinaryincome2,long,12;
 		전전분기순이익,bfnetincome2,bfnetincome2,long,12;
-		전전분기EPS,bfeps2,bfeps2,float,13.2;
-		전년대비매출액,salert,salert,float,7.2;
-		전년대비영업이익,opert,opert,float,7.2;
-		전년대비경상이익,ordrt,ordrt,float,7.2;
-		전년대비순이익,netrt,netrt,float,7.2;
-		전년대비EPS,epsrt,epsrt,float,7.2;
+		전전분기EPS,bfeps2,bfeps2,double,13.2;
+		전년대비매출액,salert,salert,double,7.2;
+		전년대비영업이익,opert,opert,double,7.2;
+		전년대비경상이익,ordrt,ordrt,double,7.2;
+		전년대비순이익,netrt,netrt,double,7.2;
+		전년대비EPS,epsrt,epsrt,double,7.2;
 		락구분,info1,info1,char,10;
 		관리/급등구분,info2,info2,char,10;
 		정지/연장구분,info3,info3,char,10;
 		투자/불성실구분,info4,info4,char,12;
 		장구분,janginfo,janginfo,char,10;
-		T.PER,t_per,t_per,float,6.2;
+		T.PER,t_per,t_per,double,6.2;
 		통화ISO코드,tonghwa,tonghwa,char,3;
 		총매도대금1,dval1,dval1,long,18;
 		총매수대금1,sval1,sval1,long,18;
@@ -167,7 +168,11 @@ BEGIN_FUNCTION_MAP
 		이상급등종목여부,abnormal_rise_gu,abnormal_rise_gu,char,1;
 		대차불가표시,lend_text,lend_text,char,8;
 		ETF/ETN투자유의,ty_text,ty_text,char,8;
+		NXT장구분,nxt_janginfo,nxt_janginfo,char,10;
+		NXT단기과열/VI발동,nxt_shterm_text,nxt_shterm_text,char,10;
+		NXT정적VI상한가,nxt_svi_uplmtprice,nxt_svi_uplmtprice,long,8;
+		NXT정적VI하한가,nxt_svi_dnlmtprice,nxt_svi_dnlmtprice,long,8;
+		거래소별단축코드,ex_shcode,ex_shcode,char,10;
 	end
 	END_DATA_MAP
 END_FUNCTION_MAP
-

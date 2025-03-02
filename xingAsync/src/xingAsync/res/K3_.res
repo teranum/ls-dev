@@ -1,5 +1,5 @@
 BEGIN_FUNCTION_MAP
-.Feed, KOSDAQ체결(K3), K3_, attr, key=6, group=1;
+.Feed, KOSDAQ체결(K3), K3_, attr, key=6, group=4;
     BEGIN_DATA_MAP
     InBlock,입력,input;
     begin
@@ -33,6 +33,7 @@ BEGIN_FUNCTION_MAP
 		장정보,			status,		status,		char,	2;
 	전일동시간대거래량,	jnilvolume,	jnilvolume,	long,	12;
 		단축코드,		shcode,		shcode,		char,	6;
+        거래소명,       exchname,   exchname,   char,   3; // KRX NXT
     end
     END_DATA_MAP
 END_FUNCTION_MAP

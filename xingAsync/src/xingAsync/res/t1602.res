@@ -11,6 +11,7 @@ BEGIN_FUNCTION_MAP
 		CTSIDX,cts_idx,cts_idx,long,4;
 		조회건수,cnt,cnt,int,4;
 		직전대비구분(C:직전대비),gubun3,gubun3,char,1;
+		거래소구분코드,exchgubun,exchgubun,char,1;
 	end
 	t1602OutBlock,기본출력,output;
 	begin
@@ -75,6 +76,7 @@ BEGIN_FUNCTION_MAP
 		사모펀드매도,md_00,md_00,long,12;
 		사모펀드증감,rate_00,rate_00,long,12;
 		사모펀드순매수,svolume_00,svolume_00,long,12;
+		거래소별업종코드,ex_upcode,ex_upcode,char,4;
 	end
 	t1602OutBlock1,출력1,output,occurs;
 	begin

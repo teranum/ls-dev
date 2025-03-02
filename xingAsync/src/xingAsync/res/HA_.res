@@ -54,6 +54,11 @@ BEGIN_FUNCTION_MAP
 		단축코드,			shcode,			shcode,			char,	6;
 		배분적용구분,		alloc_gubun,	alloc_gubun,	char,	1;
 		누적거래량,			volume,			volume,			long,	12;
+        중간가격,                       midprice,       midprice,       long,   8;
+        매도중간가잔량합계수량,         offermidsumrem, offermidsumrem, long,   9;
+        매수중간가잔량합계수량,         bidmidsumrem,   bidmidsumrem,   long,   9;
+        중간가잔량합계수량,             midsumrem,      midsumrem,      long,   9;
+        중간가잔량구분(' '없음'1'매도'2'매수),             midsumremgubun, midsumremgubun, char,   1;
     end
     END_DATA_MAP
 END_FUNCTION_MAP

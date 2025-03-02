@@ -5,6 +5,7 @@ BEGIN_FUNCTION_MAP
 	begin
 		종목코드,code,code,char,6;
 		건수,nrec,nrec,char,2;
+		거래소구분코드,exchgubun,exchgubun,char,1;
 	end
 	t1104InBlock1,기본입력1,input,occurs;
 	begin
