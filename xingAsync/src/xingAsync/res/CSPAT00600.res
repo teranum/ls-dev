@@ -13,6 +13,7 @@ BEGIN_FUNCTION_MAP
 		신용거래코드, MgntrnCode, MgntrnCode, char, 3;
 		대출일, LoanDt, LoanDt, char, 8;
 		주문조건구분, OrdCndiTpCode, OrdCndiTpCode, char, 1;
+		회원사번호, MbrNo, MbrNo, char, 3;
 	end
 	CSPAT00600OutBlock1,In(*EMPTY*),output;
 	begin

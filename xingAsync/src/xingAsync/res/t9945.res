@@ -11,9 +11,9 @@ BEGIN_FUNCTION_MAP
 		단축코드,shcode,shcode,char,6;
 		확장코드,expcode,expcode,char,12;
 		ETF구분,etfchk,etfchk,char,1;
-		filler,filler,filler,char,5;
+		NXT상장구분,nxt_chk,nxt_chk,char,1;
+		filler,filler,filler,char,4;
 	end
 	END_DATA_MAP
 END_FUNCTION_MAP
 
-t9945
